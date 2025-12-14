@@ -17,12 +17,44 @@ export const playerState = reactive({
   duration: 0,
   volume: 0.8,
   playMode: PLAY_MODES.LOOP,
-  playlist: [], // 播放列表
-  currentIndex: -1, // 当前播放索引
+  playlist: [],
+  currentIndex: -1,
 });
 
 // 播放器实例引用
 export const audioRef = ref(null);
+
+// 格式化时长
+export const formatDuration = (seconds) => {
+  if (!seconds || isNaN(seconds)) return '--:--';
+  const mins = Math.floor(seconds / 60);
+  const secs = Math.floor(seconds % 60);
+  return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+};
+
+// 增加播放次数
+export const incrementPlayCount = async (songId) => {
+  try {
+    await api.post(`/songs/${songId}/play_count`);
+  } catch (error) {
+    console.error('增加播放次数失败:', error);
+  }
+};
+
+// 记录播放历史
+export const recordPlayHistory = async (songId) => {
+  const userId = localStorage.getItem('user_id');
+  if (!userId || !songId) return;
+  
+  try {
+    await api.post(`/users/${userId}/history`, {
+      song_id: songId,
+      progress: 0
+    });
+  } catch (error) {
+    console.error('记录播放历史失败:', error);
+  }
+};
 
 // 设置播放列表
 export const setPlaylist = (songs, index = 0) => {
@@ -49,6 +81,11 @@ export const playSong = (song, songs = null) => {
   }
   playerState.currentSong = song;
   playerState.isPlaying = true;
+  
+  // 记录播放历史（后端会同时更新播放次数）
+  if (song && song.id) {
+    recordPlayHistory(song.id);
+  }
 };
 
 // 播放上一首
@@ -66,6 +103,12 @@ export const playPrev = () => {
   playerState.currentIndex = newIndex;
   playerState.currentSong = playerState.playlist[newIndex];
   playerState.isPlaying = true;
+  
+  // 记录播放历史（后端会同时更新播放次数）
+  const song = playerState.playlist[newIndex];
+  if (song && song.id) {
+    recordPlayHistory(song.id);
+  }
 };
 
 // 播放下一首
@@ -87,6 +130,12 @@ export const playNext = () => {
   playerState.currentIndex = newIndex;
   playerState.currentSong = playerState.playlist[newIndex];
   playerState.isPlaying = true;
+  
+  // 记录播放历史（后端会同时更新播放次数）
+  const song = playerState.playlist[newIndex];
+  if (song && song.id) {
+    recordPlayHistory(song.id);
+  }
 };
 
 // 切换播放模式
@@ -126,22 +175,5 @@ export const togglePlay = () => {
     pauseSong();
   } else {
     resumeSong();
-  }
-};
-
-// 格式化时长
-export const formatDuration = (seconds) => {
-  if (!seconds || isNaN(seconds)) return '--:--';
-  const mins = Math.floor(seconds / 60);
-  const secs = Math.floor(seconds % 60);
-  return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-};
-
-// 增加播放次数
-export const incrementPlayCount = async (songId) => {
-  try {
-    await api.post(`/songs/${songId}/play_count`);
-  } catch (error) {
-    console.error('增加播放次数失败:', error);
   }
 };

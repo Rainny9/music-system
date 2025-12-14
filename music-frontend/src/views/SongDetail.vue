@@ -43,6 +43,7 @@
             {{ isCurrentSong && playerState.isPlaying ? '暂停' : '播放' }}
           </button>
           <button class="btn" @click="toggleFavorite">收藏/取消收藏</button>
+          <button class="btn" @click="openAddToPlaylist">添加到歌单</button>
           <a v-if="song.download_url" :href="song.download_url" target="_blank" class="btn">
             下载
           </a>
@@ -98,6 +99,36 @@
         </div>
       </div>
     </div>
+
+    <!-- 添加到歌单弹窗 -->
+    <div v-if="showPlaylistModal" class="modal-overlay" @click.self="showPlaylistModal = false">
+      <div class="playlist-modal">
+        <div class="playlist-modal-header">
+          <h3>添加到歌单</h3>
+          <button class="close-btn" @click="showPlaylistModal = false">×</button>
+        </div>
+        <div class="playlist-modal-body">
+          <div v-if="userPlaylists.length === 0" class="empty-playlists">
+            <p>暂无歌单</p>
+            <button class="btn primary" @click="goToPlaylists">创建歌单</button>
+          </div>
+          <div v-else class="playlist-list">
+            <div 
+              v-for="playlist in userPlaylists" 
+              :key="playlist.id" 
+              class="playlist-item"
+              @click="addToPlaylist(playlist.id)"
+            >
+              <div class="playlist-icon">♪</div>
+              <div class="playlist-info">
+                <div class="playlist-name">{{ playlist.name }}</div>
+                <div class="playlist-count">{{ playlist.song_count || 0 }} 首歌曲</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -116,6 +147,10 @@ const comments = ref([]);
 const commentText = ref("");
 const msg = ref("");
 const lyricsContainer = ref(null);
+
+// 添加到歌单相关
+const showPlaylistModal = ref(false);
+const userPlaylists = ref([]);
 
 // 判断当前歌曲是否正在播放
 const isCurrentSong = computed(() => {
@@ -231,8 +266,43 @@ const addComment = async () => {
     msg.value = "评论成功";
     loadComments();
   } catch (e) {
-    msg.value = e.response?.data?.msg || "评论失败";
+    const data = e.response?.data;
+    if (data?.reason) {
+      msg.value = `${data.msg}：${data.reason}`;
+    } else {
+      msg.value = data?.msg || "评论失败";
+    }
   }
+};
+
+// 打开添加到歌单弹窗
+const openAddToPlaylist = async () => {
+  const uid = localStorage.getItem("user_id");
+  if (!uid) { alert("请先登录"); router.push("/login"); return; }
+  try {
+    const res = await api.get(`/playlists?user_id=${uid}`);
+    userPlaylists.value = res.data;
+  } catch (e) { userPlaylists.value = []; }
+  showPlaylistModal.value = true;
+};
+
+// 添加歌曲到歌单
+const addToPlaylist = async (playlistId) => {
+  try {
+    await api.post(`/playlists/${playlistId}/songs`, { song_id: songId });
+    alert("已添加到歌单");
+    showPlaylistModal.value = false;
+  } catch (e) {
+    if (e.response?.data?.msg === "song already in playlist") {
+      alert("歌曲已在该歌单中");
+    } else { alert("添加失败"); }
+  }
+};
+
+// 跳转到歌单页面
+const goToPlaylists = () => {
+  showPlaylistModal.value = false;
+  router.push("/playlists");
 };
 
 onMounted(() => {
@@ -244,8 +314,13 @@ onMounted(() => {
 </script>
 
 <style scoped>
+/* 歌曲详情 - 中华风 */
 .song-detail-page {
-  padding: 24px 0;
+  padding: 24px 20px;
+  max-width: 1200px;
+  margin: 0 auto;
+  min-height: calc(100vh - 140px);
+  background: rgba(255, 254, 249, 0.85);
 }
 
 .back-btn {
@@ -255,28 +330,41 @@ onMounted(() => {
   padding: 8px 16px;
   margin-top: 0;
   margin-bottom: 16px;
-  background: #fff;
-  border: 1px solid #e0e0e0;
-  border-radius: 20px;
+  background: #fffef9;
+  border: 1px solid rgba(212, 168, 75, 0.3);
+  border-radius: 4px;
   font-size: 14px;
   color: #666;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.3s;
 }
 
 .back-btn:hover {
-  background: #f5f5f5;
-  color: #31c27c;
-  border-color: #31c27c;
+  background: rgba(212, 168, 75, 0.1);
+  color: #d4a84b;
+  border-color: #d4a84b;
 }
 
 .song-header {
   display: flex;
   gap: 24px;
-  background: #ffffff;
-  padding: 20px 24px;
+  background: linear-gradient(135deg, #fffef9, rgba(212, 168, 75, 0.05));
+  padding: 24px;
   border-radius: 8px;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+  border: 1px solid rgba(212, 168, 75, 0.2);
+  position: relative;
+  overflow: hidden;
+}
+
+.song-header::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 300px;
+  height: 300px;
+  background: radial-gradient(circle, rgba(45, 90, 90, 0.03) 0%, transparent 70%);
+  pointer-events: none;
 }
 
 .cover-box {
@@ -284,10 +372,13 @@ onMounted(() => {
   height: 220px;
   border-radius: 4px;
   overflow: hidden;
-  background: #f0f2f5;
+  background: linear-gradient(135deg, rgba(255,255,255,0.4) 0%, #8BA8A8 50%, #7a9999 100%);
   display: flex;
   align-items: center;
   justify-content: center;
+  border: 2px solid #d4a84b;
+  box-shadow: 0 8px 25px rgba(139, 168, 168, 0.2);
+  flex-shrink: 0;
 }
 
 .cover-img {
@@ -298,67 +389,89 @@ onMounted(() => {
 
 .cover-placeholder {
   font-size: 42px;
-  color: #999;
+  color: #d4a84b;
 }
 
 .info-box {
   flex: 1;
+  position: relative;
+  z-index: 1;
 }
 
 .song-title {
-  font-size: 24px;
+  font-size: 26px;
   font-weight: 600;
-  margin-bottom: 8px;
+  margin-bottom: 12px;
+  color: #1a1a1a;
+  letter-spacing: 1px;
 }
 
 .song-artist {
-  font-size: 14px;
+  font-size: 15px;
   color: #666;
-  margin-bottom: 4px;
+  margin-bottom: 6px;
 }
 
 .song-meta {
   font-size: 13px;
   color: #999;
-  margin-bottom: 4px;
+  margin-bottom: 6px;
 }
 
 .action-row {
-  margin: 16px 0 8px;
+  margin: 20px 0 12px;
   display: flex;
   gap: 12px;
+  flex-wrap: wrap;
 }
 
 .btn {
-  padding: 6px 16px;
-  border-radius: 16px;
-  border: 1px solid #dcdfe6;
-  background: #ffffff;
-  color: #606266;
+  padding: 8px 20px;
+  border-radius: 4px;
+  border: 1px solid rgba(212, 168, 75, 0.3);
+  background: #fffef9;
+  color: #666;
   font-size: 13px;
   cursor: pointer;
+  transition: all 0.3s;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+}
+
+.btn:hover {
+  border-color: #d4a84b;
+  color: #d4a84b;
+  background: rgba(212, 168, 75, 0.1);
 }
 
 .btn.primary {
-  background: #409eff;
-  border-color: #409eff;
-  color: #fff;
+  background: linear-gradient(135deg, rgba(255,255,255,0.4) 0%, #8BA8A8 50%, #7a9999 100%);
+  border-color: #d4a84b;
+  color: #d4a84b;
+}
+
+.btn.primary:hover {
+  background: linear-gradient(135deg, rgba(255,255,255,0.5) 0%, #9ab8b8 50%, #8BA8A8 100%);
+  box-shadow: 0 4px 12px rgba(139, 168, 168, 0.4);
 }
 
 .now-playing-info {
-  margin-top: 12px;
-  padding: 10px 16px;
-  background: linear-gradient(135deg, #e8f5e9, #c8e6c9);
-  border-radius: 8px;
+  margin-top: 16px;
+  padding: 12px 16px;
+  background: linear-gradient(135deg, rgba(212, 168, 75, 0.1), rgba(212, 168, 75, 0.05));
+  border-radius: 4px;
+  border: 1px solid rgba(212, 168, 75, 0.2);
   display: flex;
   align-items: center;
   gap: 10px;
   font-size: 13px;
-  color: #2e7d32;
+  color: #8b7355;
 }
 
 .playing-icon {
   font-size: 16px;
+  color: #2d5a5a;
   animation: pulse 1s infinite;
 }
 
@@ -370,25 +483,50 @@ onMounted(() => {
 .playing-time {
   margin-left: auto;
   font-family: monospace;
+  color: #d4a84b;
 }
 
 .song-body {
   display: flex;
   gap: 24px;
-  margin-top: 20px;
+  margin-top: 24px;
 }
 
-/* 左侧歌词 */
+/* 左侧歌词 - 中华风 */
 .lyrics-box {
   flex: 2;
-  background: #ffffff;
-  padding: 16px 20px;
+  background: #fffef9;
+  padding: 20px;
   border-radius: 8px;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+  border: 1px solid rgba(212, 168, 75, 0.15);
+}
+
+.lyrics-box h3,
+.comments-box h3 {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1a1a1a;
+  padding-left: 12px;
+  position: relative;
+  letter-spacing: 1px;
+  margin: 0;
+}
+
+.lyrics-box h3::before,
+.comments-box h3::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 4px;
+  height: 16px;
+  background: linear-gradient(180deg, #2d5a5a, #d4a84b);
+  border-radius: 2px;
 }
 
 .lyrics-container {
-  margin-top: 8px;
+  margin-top: 12px;
   max-height: 300px;
   overflow-y: auto;
   padding: 10px 0;
@@ -404,10 +542,10 @@ onMounted(() => {
 }
 
 .lyric-line.active {
-  color: #31c27c;
+  color: #2d5a5a;
   font-weight: 500;
   font-size: 15px;
-  background: #f0fff0;
+  background: rgba(45, 90, 90, 0.05);
 }
 
 .no-lyrics {
@@ -416,56 +554,91 @@ onMounted(() => {
   padding: 40px 0;
 }
 
-/* 右侧评论 */
+/* 右侧评论 - 中华风 */
 .comments-box {
   flex: 3;
-  background: #ffffff;
-  padding: 16px 20px;
+  background: #fffef9;
+  padding: 20px;
   border-radius: 8px;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+  border: 1px solid rgba(212, 168, 75, 0.15);
 }
 
 .comment-list {
   list-style: none;
   padding: 0;
-  margin: 8px 0 12px;
+  margin: 12px 0;
 }
 
 .comment-item {
-  padding: 8px 0;
-  border-bottom: 1px solid #f0f0f0;
+  padding: 12px 0;
+  border-bottom: 1px solid rgba(212, 168, 75, 0.1);
 }
 
 .comment-meta {
   font-size: 12px;
   color: #999;
-  margin-bottom: 2px;
+  margin-bottom: 4px;
 }
 
 .comment-content {
-  font-size: 13px;
+  font-size: 14px;
   color: #333;
+  line-height: 1.6;
 }
 
 .comment-form textarea {
   width: 100%;
-  min-height: 60px;
-  margin-top: 8px;
-  padding: 6px 8px;
-  font-size: 13px;
+  min-height: 80px;
+  margin-top: 12px;
+  padding: 10px 12px;
+  font-size: 14px;
   border-radius: 4px;
-  border: 1px solid #dcdfe6;
+  border: 1px solid rgba(212, 168, 75, 0.3);
   resize: vertical;
   box-sizing: border-box;
+  background: #fff;
+  transition: all 0.3s;
+  font-family: inherit;
+}
+
+.comment-form textarea:focus {
+  outline: none;
+  border-color: #d4a84b;
+  box-shadow: 0 0 0 2px rgba(212, 168, 75, 0.1);
 }
 
 .comment-form .btn {
-  margin-top: 8px;
+  margin-top: 10px;
 }
 
 .comment-msg {
   font-size: 12px;
   color: #999;
-  margin-top: 4px;
+  margin-top: 6px;
+}
+
+/* 弹窗样式 - 中华风 */
+.modal-overlay { position: fixed; inset: 0; background: rgba(26,26,26,0.6); display: flex; align-items: center; justify-content: center; z-index: 1000; }
+.playlist-modal { background: #fffef9; border-radius: 8px; width: 360px; max-width: 90%; border: 1px solid rgba(212, 168, 75, 0.3); box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2); }
+.playlist-modal-header { display: flex; justify-content: space-between; align-items: center; padding: 14px 18px; border-bottom: 1px solid rgba(212, 168, 75, 0.2); background: linear-gradient(90deg, rgba(45, 90, 90, 0.05), transparent); }
+.playlist-modal-header h3 { font-size: 16px; font-weight: 600; color: #1a1a1a; margin: 0; letter-spacing: 1px; }
+.close-btn { width: 28px; height: 28px; border: none; background: none; font-size: 20px; color: #999; cursor: pointer; transition: all 0.3s; border-radius: 4px; }
+.close-btn:hover { background: rgba(45, 90, 90, 0.1); color: #2d5a5a; }
+.playlist-modal-body { padding: 16px; max-height: 400px; overflow-y: auto; }
+.empty-playlists { text-align: center; padding: 30px 0; }
+.empty-playlists p { color: #999; margin-bottom: 16px; }
+.playlist-list { display: flex; flex-direction: column; gap: 8px; }
+.playlist-item { display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: 4px; cursor: pointer; transition: all 0.3s; border: 1px solid transparent; }
+.playlist-item:hover { background: rgba(212, 168, 75, 0.1); border-color: rgba(212, 168, 75, 0.2); }
+.playlist-icon { width: 40px; height: 40px; border-radius: 4px; background: linear-gradient(135deg, rgba(255,255,255,0.4) 0%, #8BA8A8 50%, #7a9999 100%); color: #d4a84b; display: flex; align-items: center; justify-content: center; font-size: 18px; }
+.playlist-info { flex: 1; }
+.playlist-name { font-size: 14px; color: #1a1a1a; margin-bottom: 2px; }
+.playlist-count { font-size: 12px; color: #999; }
+
+@media (max-width: 768px) {
+  .song-header { flex-direction: column; align-items: center; text-align: center; }
+  .cover-box { width: 180px; height: 180px; }
+  .action-row { justify-content: center; }
+  .song-body { flex-direction: column; }
 }
 </style>

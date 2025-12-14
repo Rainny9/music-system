@@ -1,79 +1,215 @@
+/* ========== 水墨丹青音乐馆主题 ========== */
+
+/* 中国水墨色彩变量 */
 :root {
-  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
-  line-height: 1.5;
+  /* 主色调 - 浅青（宣纸底青） */
+  --primary-color: #E6F4EA;
+  --primary-light: #f0f9f2;
+  --primary-dark: #c8e6cf;
+  --primary-pale: #d8efe0;
+  
+  /* 辅助色 - 深青/墨青 */
+  --secondary-color: #2d5a5a;
+  --secondary-light: #4a7c7c;
+  
+  /* 金色点缀 */
+  --gold-color: #d4a84b;
+  --gold-light: #e8c478;
+  --gold-dark: #b8923d;
+  
+  /* 水墨色系 */
+  --ink-black: #1a1a1a;
+  --ink-dark: #2a2a2a;
+  --ink-gray: #555555;
+  --ink-light: #888888;
+  
+  /* 宣纸色/背景色 */
+  --paper-color: #fffef9;
+  --paper-dark: #f5f4ef;
+  --paper-cream: #ffffff;
+  --paper-warm: #faf9f4;
+  
+  /* 字体 */
+  font-family: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "WenQuanYi Micro Hei", sans-serif;
+  line-height: 1.6;
   font-weight: 400;
-
-  color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
-
+  
+  color-scheme: light;
+  color: var(--ink-dark);
+  background-color: var(--paper-color);
+  
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-a {
-  font-weight: 500;
-  color: #646cff;
-  text-decoration: inherit;
-}
-a:hover {
-  color: #535bf2;
+/* 全局重置 */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
 }
 
+/* 水墨竹石淡纹背景 SVG */
 body {
   margin: 0;
-  display: flex;
-  place-items: center;
   min-width: 320px;
   min-height: 100vh;
-}
-
-h1 {
-  font-size: 3.2em;
-  line-height: 1.1;
-}
-
-button {
-  border-radius: 8px;
-  border: 1px solid transparent;
-  padding: 0.6em 1.2em;
-  font-size: 1em;
-  font-weight: 500;
-  font-family: inherit;
-  background-color: #1a1a1a;
-  cursor: pointer;
-  transition: border-color 0.25s;
-}
-button:hover {
-  border-color: #646cff;
-}
-button:focus,
-button:focus-visible {
-  outline: 4px auto -webkit-focus-ring-color;
-}
-
-.card {
-  padding: 2em;
+  background-color: #fffef9;
+  /* 水墨竹石淡纹背景 */
+  background-image: 
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 800'%3E%3Cg fill='none' stroke='%232d5a5a' stroke-width='0.5' opacity='0.08'%3E%3Cpath d='M30 800 Q35 600 30 400 Q25 200 35 0'/%3E%3Cpath d='M35 350 Q60 320 45 280'/%3E%3Cpath d='M28 450 Q5 420 15 380'/%3E%3Cpath d='M32 550 Q55 530 48 490'/%3E%3Cpath d='M25 650 Q0 620 12 580'/%3E%3Cpath d='M38 250 Q58 230 52 200'/%3E%3Cpath d='M33 150 Q10 130 18 100'/%3E%3Cellipse cx='80' cy='750' rx='35' ry='20'/%3E%3Cellipse cx='90' cy='730' rx='25' ry='15'/%3E%3Cellipse cx='70' cy='770' rx='20' ry='12'/%3E%3Cpath d='M120 800 Q125 650 118 500 Q122 350 115 200'/%3E%3Cpath d='M118 400 Q140 380 130 350'/%3E%3Cpath d='M122 550 Q100 520 108 480'/%3E%3Cpath d='M116 300 Q138 270 128 240'/%3E%3C/g%3E%3C/svg%3E"),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 800'%3E%3Cg fill='none' stroke='%232d5a5a' stroke-width='0.5' opacity='0.08'%3E%3Cpath d='M170 800 Q165 600 170 400 Q175 200 165 0'/%3E%3Cpath d='M165 350 Q140 320 155 280'/%3E%3Cpath d='M172 450 Q195 420 185 380'/%3E%3Cpath d='M168 550 Q145 530 152 490'/%3E%3Cpath d='M175 650 Q200 620 188 580'/%3E%3Cpath d='M162 250 Q142 230 148 200'/%3E%3Cpath d='M167 150 Q190 130 182 100'/%3E%3Cellipse cx='120' cy='750' rx='35' ry='20'/%3E%3Cellipse cx='110' cy='730' rx='25' ry='15'/%3E%3Cellipse cx='130' cy='770' rx='20' ry='12'/%3E%3Cpath d='M80 800 Q75 650 82 500 Q78 350 85 200'/%3E%3Cpath d='M82 400 Q60 380 70 350'/%3E%3Cpath d='M78 550 Q100 520 92 480'/%3E%3Cpath d='M84 300 Q62 270 72 240'/%3E%3C/g%3E%3C/svg%3E"),
+    linear-gradient(90deg, rgba(230, 244, 234, 0.4) 0%, transparent 15%, transparent 85%, rgba(230, 244, 234, 0.4) 100%);
+  background-position: left top, right top, center;
+  background-repeat: repeat-y, repeat-y, no-repeat;
+  background-size: 200px auto, 200px auto, 100% 100%;
 }
 
 #app {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
-  text-align: center;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  text-align: left;
 }
 
-@media (prefers-color-scheme: light) {
-  :root {
-    color: #213547;
-    background-color: #ffffff;
-  }
-  a:hover {
-    color: #747bff;
-  }
-  button {
-    background-color: #f9f9f9;
-  }
+/* 链接样式 */
+a {
+  color: var(--primary-color);
+  text-decoration: none;
+  transition: color 0.3s ease;
+}
+
+a:hover {
+  color: var(--primary-light);
+}
+
+/* 按钮基础样式 */
+button {
+  border-radius: 4px;
+  border: 1px solid transparent;
+  padding: 0.5em 1em;
+  font-size: 14px;
+  font-weight: 500;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+/* 滚动条美化 - 水墨风 */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--paper-dark);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, var(--secondary-color), #1e3d3d);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--secondary-light);
+}
+
+/* 选中文字颜色 */
+::selection {
+  background: var(--secondary-color);
+  color: white;
+}
+
+/* 水墨晕染效果 */
+.ink-wash {
+  position: relative;
+}
+
+.ink-wash::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: radial-gradient(ellipse at center, transparent 0%, rgba(45, 90, 90, 0.02) 100%);
+  pointer-events: none;
+}
+
+/* 金边装饰 */
+.gold-border {
+  border: 1px solid var(--gold-color);
+  box-shadow: inset 0 0 0 1px rgba(212, 168, 75, 0.2);
+}
+
+/* 古典分隔线 */
+.classic-divider {
+  height: 1px;
+  background: linear-gradient(90deg, 
+    transparent, 
+    var(--gold-color) 20%, 
+    var(--gold-color) 80%, 
+    transparent
+  );
+  margin: 20px 0;
+}
+
+/* 卡片悬浮效果 */
+.hover-lift {
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.hover-lift:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 25px rgba(45, 90, 90, 0.15);
+}
+
+/* 渐变文字 */
+.gradient-text {
+  background: linear-gradient(135deg, var(--secondary-color), var(--gold-color));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* 山水画装饰背景 */
+.mountain-bg {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 120'%3E%3Cpath fill='%232d5a5a' fill-opacity='0.05' d='M0 120L50 100L150 80L250 60L350 90L450 40L550 70L650 30L750 60L850 20L950 50L1050 10L1150 40L1200 0V120H0Z'/%3E%3C/svg%3E");
+  background-size: 100% auto;
+  background-position: bottom;
+  background-repeat: no-repeat;
+}
+
+/* 页面两侧水墨竹石淡纹装饰 */
+.bamboo-bg {
+  position: relative;
+}
+
+.bamboo-bg::before,
+.bamboo-bg::after {
+  content: '';
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  width: 200px;
+  pointer-events: none;
+  z-index: 0;
+  background-repeat: repeat-y;
+  background-size: 200px auto;
+  opacity: 0.6;
+}
+
+.bamboo-bg::before {
+  left: 0;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 800'%3E%3Cg fill='none' stroke='%232d5a5a' stroke-width='0.5' opacity='0.12'%3E%3Cpath d='M30 800 Q35 600 30 400 Q25 200 35 0'/%3E%3Cpath d='M35 350 Q60 320 45 280'/%3E%3Cpath d='M28 450 Q5 420 15 380'/%3E%3Cpath d='M32 550 Q55 530 48 490'/%3E%3Cpath d='M25 650 Q0 620 12 580'/%3E%3Cpath d='M38 250 Q58 230 52 200'/%3E%3Cpath d='M33 150 Q10 130 18 100'/%3E%3Cellipse cx='80' cy='750' rx='35' ry='20'/%3E%3Cellipse cx='90' cy='730' rx='25' ry='15'/%3E%3Cellipse cx='70' cy='770' rx='20' ry='12'/%3E%3Cpath d='M120 800 Q125 650 118 500 Q122 350 115 200'/%3E%3Cpath d='M118 400 Q140 380 130 350'/%3E%3Cpath d='M122 550 Q100 520 108 480'/%3E%3Cpath d='M116 300 Q138 270 128 240'/%3E%3C/g%3E%3C/svg%3E");
+  background-position: left top;
+}
+
+.bamboo-bg::after {
+  right: 0;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 800'%3E%3Cg fill='none' stroke='%232d5a5a' stroke-width='0.5' opacity='0.12'%3E%3Cpath d='M170 800 Q165 600 170 400 Q175 200 165 0'/%3E%3Cpath d='M165 350 Q140 320 155 280'/%3E%3Cpath d='M172 450 Q195 420 185 380'/%3E%3Cpath d='M168 550 Q145 530 152 490'/%3E%3Cpath d='M175 650 Q200 620 188 580'/%3E%3Cpath d='M162 250 Q142 230 148 200'/%3E%3Cpath d='M167 150 Q190 130 182 100'/%3E%3Cellipse cx='120' cy='750' rx='35' ry='20'/%3E%3Cellipse cx='110' cy='730' rx='25' ry='15'/%3E%3Cellipse cx='130' cy='770' rx='20' ry='12'/%3E%3Cpath d='M80 800 Q75 650 82 500 Q78 350 85 200'/%3E%3Cpath d='M82 400 Q60 380 70 350'/%3E%3Cpath d='M78 550 Q100 520 92 480'/%3E%3Cpath d='M84 300 Q62 270 72 240'/%3E%3C/g%3E%3C/svg%3E");
+  background-position: right top;
 }

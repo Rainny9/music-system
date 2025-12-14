@@ -1,27 +1,5 @@
 <template>
   <div class="admin-users">
-    <!-- 后台导航标签 -->
-    <div class="admin-tabs">
-      <router-link to="/admin/songs" class="tab-item" :class="{ active: $route.path === '/admin/songs' }">
-        <svg viewBox="0 0 24 24" width="18" height="18">
-          <path fill="currentColor" d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/>
-        </svg>
-        歌曲管理
-      </router-link>
-      <router-link to="/admin/users" class="tab-item" :class="{ active: $route.path === '/admin/users' }">
-        <svg viewBox="0 0 24 24" width="18" height="18">
-          <path fill="currentColor" d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/>
-        </svg>
-        用户管理
-      </router-link>
-      <router-link to="/admin/announcements" class="tab-item" :class="{ active: $route.path === '/admin/announcements' }">
-        <svg viewBox="0 0 24 24" width="18" height="18">
-          <path fill="currentColor" d="M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-7 9h-2V5h2v6zm0 4h-2v-2h2v2z"/>
-        </svg>
-        公告管理
-      </router-link>
-    </div>
-
     <div class="page-header">
       <h2>用户管理</h2>
       <button class="btn primary" @click="showAddModal = true">
@@ -276,90 +254,81 @@ onMounted(() => {
 </script>
 
 <style scoped>
+/* 中华文化主题 - 用户管理 */
 .admin-users {
   padding: 20px;
+  padding-bottom: 100px;
   max-width: 1200px;
   margin: 0 auto;
-}
-
-.admin-tabs {
-  display: flex;
-  gap: 4px;
-  margin-bottom: 20px;
-  background: #fff;
-  padding: 6px;
-  border-radius: 10px;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
-}
-
-.tab-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 20px;
-  border-radius: 8px;
-  font-size: 14px;
-  color: #666;
-  text-decoration: none;
-  transition: all 0.2s;
-}
-
-.tab-item:hover {
-  background: #f5f5f5;
-  color: #333;
-}
-
-.tab-item.active {
-  background: #31c27c;
-  color: #fff;
+  background: rgba(255, 254, 249, 0.85);
 }
 
 .page-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 2px solid rgba(212, 168, 75, 0.3);
 }
 
 .page-header h2 {
-  font-size: 20px;
+  font-size: 22px;
   font-weight: 600;
-  color: #333;
+  color: #1a1a1a;
+  letter-spacing: 2px;
+  position: relative;
+  padding-left: 14px;
+  margin: 0;
+}
+
+.page-header h2::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 4px;
+  height: 22px;
+  background: linear-gradient(180deg, #2d5a5a, #d4a84b);
+  border-radius: 2px;
 }
 
 .btn {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 8px 16px;
-  border: 1px solid #dcdfe6;
+  padding: 10px 20px;
+  border: 1px solid rgba(212, 168, 75, 0.3);
   border-radius: 6px;
-  background: #fff;
-  color: #606266;
+  background: #fffef9;
+  color: #8b7355;
   font-size: 14px;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.3s;
 }
 
 .btn:hover {
-  border-color: #31c27c;
-  color: #31c27c;
+  border-color: #2d5a5a;
+  color: #2d5a5a;
 }
 
 .btn.primary {
-  background: #31c27c;
-  border-color: #31c27c;
-  color: #fff;
+  background: linear-gradient(135deg, rgba(255,255,255,0.4) 0%, #8BA8A8 50%, #7a9999 100%);
+  border: 1px solid #d4a84b;
+  color: #d4a84b;
 }
 
 .btn.primary:hover {
-  background: #28a86d;
+  background: linear-gradient(135deg, rgba(255,255,255,0.5) 0%, #9ab8b8 50%, #8BA8A8 100%);
+  box-shadow: 0 4px 12px rgba(139, 168, 168, 0.4);
 }
 
 .table-wrapper {
-  background: #fff;
+  background: linear-gradient(180deg, #fffef9 0%, #E6F4EA 100%);
   border-radius: 8px;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+  box-shadow: 0 2px 12px rgba(212, 168, 75, 0.1);
+  border: 1px solid rgba(212, 168, 75, 0.2);
   overflow: hidden;
 }
 
@@ -372,19 +341,24 @@ onMounted(() => {
 .user-table td {
   padding: 14px 16px;
   text-align: left;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid rgba(212, 168, 75, 0.1);
 }
 
 .user-table th {
-  background: #fafafa;
-  font-weight: 500;
-  color: #666;
+  background: linear-gradient(135deg, rgba(212, 168, 75, 0.1), rgba(212, 168, 75, 0.05));
+  font-weight: 600;
+  color: #8b7355;
   font-size: 13px;
+  letter-spacing: 1px;
 }
 
 .user-table td {
   font-size: 14px;
   color: #333;
+}
+
+.user-table tr:hover {
+  background: rgba(45, 90, 90, 0.02);
 }
 
 .username {
@@ -393,16 +367,16 @@ onMounted(() => {
 
 .role-badge {
   display: inline-block;
-  padding: 4px 10px;
+  padding: 4px 12px;
   border-radius: 12px;
   font-size: 12px;
-  background: #f0f0f0;
-  color: #666;
+  background: rgba(212, 168, 75, 0.1);
+  color: #8b7355;
 }
 
 .role-badge.admin {
-  background: #e8f5e9;
-  color: #2e7d32;
+  background: rgba(45, 90, 90, 0.1);
+  color: #2d5a5a;
 }
 
 .action-btns {
@@ -414,24 +388,24 @@ onMounted(() => {
   width: 32px;
   height: 32px;
   border: none;
-  background: #f5f5f5;
+  background: rgba(212, 168, 75, 0.1);
   border-radius: 6px;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #666;
+  color: #8b7355;
   transition: all 0.2s;
 }
 
 .icon-btn:hover {
-  background: #e8f5e9;
-  color: #31c27c;
+  background: rgba(212, 168, 75, 0.2);
+  color: #d4a84b;
 }
 
 .icon-btn.danger:hover {
-  background: #ffebee;
-  color: #f44336;
+  background: rgba(220, 53, 69, 0.1);
+  color: #dc3545;
 }
 
 .icon-btn:disabled {
@@ -446,79 +420,91 @@ onMounted(() => {
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(26, 26, 26, 0.6);
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1000;
+  z-index: 2000;
 }
 
 .modal {
-  background: #fff;
+  background: #fffef9;
   border-radius: 12px;
   width: 420px;
   max-width: 90%;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 10px 40px rgba(45, 90, 90, 0.15);
+  border: 1px solid rgba(212, 168, 75, 0.3);
 }
 
 .modal-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 16px 20px;
-  border-bottom: 1px solid #f0f0f0;
+  padding: 18px 24px;
+  border-bottom: 1px solid rgba(212, 168, 75, 0.2);
+  background: linear-gradient(135deg, rgba(212, 168, 75, 0.05), transparent);
 }
 
 .modal-header h3 {
-  font-size: 16px;
+  font-size: 17px;
   font-weight: 600;
-  color: #333;
+  color: #1a1a1a;
+  letter-spacing: 1px;
+  margin: 0;
 }
 
 .close-btn {
-  width: 28px;
-  height: 28px;
+  width: 32px;
+  height: 32px;
   border: none;
-  background: none;
+  background: rgba(212, 168, 75, 0.1);
+  border-radius: 50%;
   font-size: 20px;
-  color: #999;
+  color: #8b7355;
   cursor: pointer;
-  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
 }
 
 .close-btn:hover {
-  background: #f5f5f5;
-  color: #666;
+  background: rgba(45, 90, 90, 0.1);
+  color: #2d5a5a;
 }
 
 .modal-body {
-  padding: 20px;
+  padding: 24px;
 }
 
 .form-group {
-  margin-bottom: 16px;
+  margin-bottom: 18px;
 }
 
 .form-group label {
   display: block;
-  font-size: 13px;
-  color: #666;
-  margin-bottom: 6px;
+  font-size: 14px;
+  color: #1a1a1a;
+  margin-bottom: 8px;
+  font-weight: 500;
 }
 
 .form-group input[type="text"],
 .form-group input[type="password"] {
   width: 100%;
   padding: 10px 12px;
-  border: 1px solid #dcdfe6;
+  border: 1px solid rgba(212, 168, 75, 0.3);
   border-radius: 6px;
   font-size: 14px;
   box-sizing: border-box;
+  background: #fff;
+  transition: all 0.3s;
 }
 
 .form-group input:focus {
   outline: none;
-  border-color: #31c27c;
+  border-color: #d4a84b;
+  box-shadow: 0 0 0 3px rgba(212, 168, 75, 0.1);
 }
 
 .checkbox-label {
@@ -532,6 +518,7 @@ onMounted(() => {
   width: 16px;
   height: 16px;
   cursor: pointer;
+  accent-color: #2d5a5a;
 }
 
 .checkbox-label span {
@@ -542,9 +529,25 @@ onMounted(() => {
 .modal-footer {
   display: flex;
   justify-content: flex-end;
-  gap: 10px;
-  padding: 16px 20px;
-  border-top: 1px solid #f0f0f0;
+  gap: 12px;
+  padding: 16px 24px;
+  border-top: 1px solid rgba(212, 168, 75, 0.2);
+  background: rgba(212, 168, 75, 0.03);
+}
+
+.modal-footer .btn {
+  padding: 10px 24px;
+}
+
+.modal-footer .btn:not(.primary) {
+  background: #fffef9;
+  color: #8b7355;
+  border: 1px solid rgba(212, 168, 75, 0.3);
+}
+
+.modal-footer .btn:not(.primary):hover {
+  border-color: #d4a84b;
+  color: #d4a84b;
 }
 
 /* Toast */
@@ -558,16 +561,19 @@ onMounted(() => {
   font-size: 14px;
   z-index: 2000;
   animation: slideDown 0.3s ease;
+  border: 1px solid;
 }
 
 .toast.success {
-  background: #e8f5e9;
+  background: rgba(46, 125, 50, 0.1);
   color: #2e7d32;
+  border-color: rgba(46, 125, 50, 0.2);
 }
 
 .toast.error {
-  background: #ffebee;
-  color: #c62828;
+  background: rgba(220, 53, 69, 0.1);
+  color: #dc3545;
+  border-color: rgba(220, 53, 69, 0.2);
 }
 
 @keyframes slideDown {

@@ -8,6 +8,11 @@ import AdminSongs from "../views/admin/AdminSongs.vue";
 import AdminUsers from "../views/admin/AdminUsers.vue";
 import AdminAnnouncements from "../views/admin/AdminAnnouncements.vue";
 import SearchResult from "../views/SearchResult.vue";
+import PlayHistory from "../views/PlayHistory.vue";
+import Playlists from "../views/Playlists.vue";
+import PlaylistDetail from "../views/PlaylistDetail.vue";
+import Profile from "../views/Profile.vue";
+import SongRecognition from "../views/SongRecognition.vue";
 
 const routes = [
   { path: "/", name: "Home", component: Home },
@@ -15,6 +20,11 @@ const routes = [
   { path: "/register", name: "Register", component: Register },
   { path: "/songs/:id", name: "SongDetail", component: SongDetail },
   { path: "/favorites", name: "Favorites", component: Favorites },
+  { path: "/history", name: "PlayHistory", component: PlayHistory },
+  { path: "/playlists", name: "Playlists", component: Playlists },
+  { path: "/playlists/:id", name: "PlaylistDetail", component: PlaylistDetail },
+  { path: "/profile", name: "Profile", component: Profile },
+  { path: "/recognize", name: "SongRecognition", component: SongRecognition },
   { path: "/admin/songs", name: "AdminSongs", component: AdminSongs },
   { path: "/admin/users", name: "AdminUsers", component: AdminUsers },
   { path: "/admin/announcements", name: "AdminAnnouncements", component: AdminAnnouncements },

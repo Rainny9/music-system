@@ -5,7 +5,7 @@
       <div class="register-left">
         <div class="brand">
           <div class="brand-icon">♪</div>
-          <h1>音乐馆</h1>
+          <h1>音乐分类检索系统</h1>
           <p>加入我们，开启音乐之旅</p>
         </div>
         <div class="decoration">
@@ -215,12 +215,21 @@ const backToLogin = () => {
 </script>
 
 <style scoped>
+/* 注册页 - 水墨丹青风 */
 .register-page {
   min-height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+  background-color: #fffef9;
+  /* 水墨竹石淡纹背景 */
+  background-image: 
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 800'%3E%3Cg fill='none' stroke='%232d5a5a' stroke-width='0.5' opacity='0.1'%3E%3Cpath d='M30 800 Q35 600 30 400 Q25 200 35 0'/%3E%3Cpath d='M35 350 Q60 320 45 280'/%3E%3Cpath d='M28 450 Q5 420 15 380'/%3E%3Cpath d='M32 550 Q55 530 48 490'/%3E%3Cpath d='M25 650 Q0 620 12 580'/%3E%3Cpath d='M38 250 Q58 230 52 200'/%3E%3Cpath d='M33 150 Q10 130 18 100'/%3E%3Cellipse cx='80' cy='750' rx='35' ry='20'/%3E%3Cellipse cx='90' cy='730' rx='25' ry='15'/%3E%3Cellipse cx='70' cy='770' rx='20' ry='12'/%3E%3C/g%3E%3C/svg%3E"),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 800'%3E%3Cg fill='none' stroke='%232d5a5a' stroke-width='0.5' opacity='0.1'%3E%3Cpath d='M170 800 Q165 600 170 400 Q175 200 165 0'/%3E%3Cpath d='M165 350 Q140 320 155 280'/%3E%3Cpath d='M172 450 Q195 420 185 380'/%3E%3Cpath d='M168 550 Q145 530 152 490'/%3E%3Cpath d='M175 650 Q200 620 188 580'/%3E%3Cpath d='M162 250 Q142 230 148 200'/%3E%3Cpath d='M167 150 Q190 130 182 100'/%3E%3Cellipse cx='120' cy='750' rx='35' ry='20'/%3E%3Cellipse cx='110' cy='730' rx='25' ry='15'/%3E%3Cellipse cx='130' cy='770' rx='20' ry='12'/%3E%3C/g%3E%3C/svg%3E"),
+    linear-gradient(135deg, #E6F4EA 0%, #fffef9 50%, #E6F4EA 100%);
+  background-position: left top, right top, center;
+  background-repeat: repeat-y, repeat-y, no-repeat;
+  background-size: 200px auto, 200px auto, 100% 100%;
   padding: 20px;
 }
 
@@ -228,15 +237,16 @@ const backToLogin = () => {
   display: flex;
   width: 900px;
   max-width: 100%;
-  background: #fff;
-  border-radius: 20px;
+  background: #ffffff;
+  border-radius: 12px;
   overflow: hidden;
-  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.25);
+  box-shadow: 0 25px 60px rgba(45, 90, 90, 0.15);
+  border: 1px solid rgba(212, 168, 75, 0.3);
 }
 
 .register-left {
   flex: 1;
-  background: linear-gradient(135deg, #31c27c 0%, #16a085 100%);
+  background: linear-gradient(135deg, #1e3d3d 0%, #2d5a5a 50%, #1e3d3d 100%);
   padding: 60px 40px;
   display: flex;
   flex-direction: column;
@@ -246,34 +256,64 @@ const backToLogin = () => {
   overflow: hidden;
 }
 
+/* 水墨山水背景 */
+.register-left::before {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 40%;
+  background: linear-gradient(to top, rgba(45, 90, 90, 0.3), transparent);
+  opacity: 0.5;
+}
+
+.register-left::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 200'%3E%3Cpath fill='%232d5a5a' fill-opacity='0.15' d='M0 200L50 160L100 180L150 140L200 170L250 120L300 150L350 100L400 130V200H0Z'/%3E%3Cpath fill='%232d5a5a' fill-opacity='0.1' d='M0 200L80 170L160 190L240 150L320 180L400 140V200H0Z'/%3E%3C/svg%3E");
+  background-size: cover;
+  background-position: bottom;
+}
+
 .brand {
   text-align: center;
-  color: #fff;
+  color: #e8c478;
   z-index: 1;
 }
 
 .brand-icon {
-  width: 80px;
-  height: 80px;
-  background: rgba(255, 255, 255, 0.2);
+  width: 90px;
+  height: 90px;
+  background: linear-gradient(135deg, #2d5a5a, #1e3d3d);
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 40px;
-  margin: 0 auto 20px;
-  backdrop-filter: blur(10px);
+  font-size: 44px;
+  margin: 0 auto 24px;
+  border: 3px solid #d4a84b;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
 }
 
 .brand h1 {
   font-size: 32px;
-  margin-bottom: 10px;
+  margin-bottom: 12px;
   font-weight: 600;
+  letter-spacing: 6px;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  color: #fff;
 }
 
 .brand p {
-  font-size: 16px;
-  opacity: 0.9;
+  font-size: 14px;
+  opacity: 0.7;
+  letter-spacing: 2px;
+  color: #d4a84b;
 }
 
 .decoration {
@@ -282,17 +322,18 @@ const backToLogin = () => {
   height: 100%;
   top: 0;
   left: 0;
+  z-index: 0;
 }
 
 .circle {
   position: absolute;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(212, 168, 75, 0.15);
 }
 
 .c1 { width: 200px; height: 200px; top: -50px; left: -50px; }
 .c2 { width: 150px; height: 150px; bottom: -30px; right: -30px; }
-.c3 { width: 100px; height: 100px; bottom: 50%; left: 10%; }
+.c3 { width: 80px; height: 80px; top: 30%; right: 20%; background: rgba(45, 90, 90, 0.1); }
 
 .register-right {
   flex: 1;
@@ -300,6 +341,7 @@ const backToLogin = () => {
   display: flex;
   align-items: center;
   justify-content: center;
+  background: linear-gradient(180deg, #ffffff 0%, #E6F4EA 100%);
 }
 
 .register-form-wrapper {
@@ -308,15 +350,16 @@ const backToLogin = () => {
 }
 
 .form-title {
-  font-size: 28px;
-  color: #333;
+  font-size: 26px;
+  color: #1a1a1a;
   margin-bottom: 8px;
   font-weight: 600;
+  letter-spacing: 2px;
 }
 
 .form-subtitle {
   font-size: 14px;
-  color: #999;
+  color: #888;
   margin-bottom: 24px;
 }
 
@@ -343,7 +386,7 @@ const backToLogin = () => {
 }
 
 .avatar-preview:hover {
-  border-color: #31c27c;
+  border-color: #d4a84b;
 }
 
 .avatar-preview img {
@@ -358,13 +401,17 @@ const backToLogin = () => {
   justify-content: center;
 }
 
+.avatar-placeholder svg path {
+  fill: #2d5a5a;
+}
+
 .avatar-overlay {
   position: absolute;
   bottom: 0;
   left: 0;
   right: 0;
   height: 30px;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(212, 168, 75, 0.85);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -378,7 +425,7 @@ const backToLogin = () => {
 
 .avatar-tip {
   font-size: 12px;
-  color: #999;
+  color: #888;
   margin-top: 8px;
 }
 
@@ -395,49 +442,65 @@ const backToLogin = () => {
   z-index: 1;
 }
 
+.input-icon svg path {
+  fill: #2d5a5a;
+}
+
 .input-group :deep(.el-input__wrapper) {
   padding-left: 40px;
-  border-radius: 10px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  border-radius: 6px;
+  box-shadow: none;
+  border: 1px solid #c8e6cf;
+  background: #fffef9;
 }
 
 .input-group :deep(.el-input__wrapper:hover) {
-  box-shadow: 0 2px 12px rgba(49, 194, 124, 0.2);
+  border-color: #d4a84b;
+  background: #fff;
 }
 
 .input-group :deep(.el-input__wrapper.is-focus) {
-  box-shadow: 0 0 0 2px rgba(49, 194, 124, 0.3);
+  box-shadow: 0 0 0 2px rgba(212, 168, 75, 0.2);
+  border-color: #d4a84b;
+  background: #fff;
 }
 
 .register-btn {
   width: 100%;
   height: 48px;
-  border-radius: 10px;
+  border-radius: 6px;
   font-size: 16px;
   font-weight: 500;
-  background: linear-gradient(135deg, #31c27c 0%, #16a085 100%);
+  background: linear-gradient(135deg, #d4a84b 0%, #b8923d 100%);
   border: none;
   margin-top: 10px;
+  letter-spacing: 4px;
+  color: #fff;
+  transition: all 0.3s;
 }
 
 .register-btn:hover {
-  background: linear-gradient(135deg, #28a86d 0%, #138a72 100%);
+  background: linear-gradient(135deg, #e8c478 0%, #d4a84b 100%);
+  box-shadow: 0 4px 16px rgba(212, 168, 75, 0.4);
+  transform: translateY(-1px);
 }
 
 .form-footer {
   text-align: center;
   margin-top: 20px;
   font-size: 14px;
-  color: #999;
+  color: #888;
 }
 
 .link {
-  color: #31c27c;
+  color: #d4a84b;
   cursor: pointer;
   margin-left: 4px;
+  font-weight: 500;
 }
 
 .link:hover {
+  color: #b8923d;
   text-decoration: underline;
 }
 

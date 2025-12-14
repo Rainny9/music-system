@@ -5,7 +5,7 @@
       <!-- 左侧 LOGO + 名称 -->
       <div class="logo-area">
         <div class="logo-circle">♪</div>
-        <span class="logo-text">音乐馆</span>
+        <span class="logo-text">音乐检索</span>
       </div>
 
       <!-- 中间主导航 -->
@@ -18,6 +18,7 @@
           首页
         </router-link>
         <router-link
+          v-if="userId"
           to="/favorites"
           class="nav-item"
           :class="{ active: $route.path === '/favorites' }"
@@ -25,12 +26,59 @@
           我的收藏
         </router-link>
         <router-link
+          v-if="userId"
+          to="/playlists"
+          class="nav-item"
+          :class="{ active: $route.path === '/playlists' }"
+        >
+          我的歌单
+        </router-link>
+        <router-link
+          v-if="userId"
+          to="/history"
+          class="nav-item"
+          :class="{ active: $route.path === '/history' }"
+        >
+          播放历史
+        </router-link>
+        <router-link
+          to="/recognize"
+          class="nav-item"
+          :class="{ active: $route.path === '/recognize' }"
+        >
+          歌曲检索
+        </router-link>
+        <router-link
+          v-if="userId"
+          to="/profile"
+          class="nav-item"
+          :class="{ active: $route.path === '/profile' }"
+        >
+          个人中心
+        </router-link>
+        <router-link
           v-if="isAdmin"
           to="/admin/songs"
           class="nav-item"
-          :class="{ active: $route.path.startsWith('/admin') }"
+          :class="{ active: $route.path === '/admin/songs' }"
         >
-          后台管理
+          歌曲管理
+        </router-link>
+        <router-link
+          v-if="isAdmin"
+          to="/admin/users"
+          class="nav-item"
+          :class="{ active: $route.path === '/admin/users' }"
+        >
+          用户管理
+        </router-link>
+        <router-link
+          v-if="isAdmin"
+          to="/admin/announcements"
+          class="nav-item"
+          :class="{ active: $route.path === '/admin/announcements' }"
+        >
+          公告管理
         </router-link>
       </nav>
 
@@ -85,6 +133,7 @@
             <span class="user-name">{{ userName || '用户' + userId }}</span>
             <div v-if="showUserMenu" class="user-menu">
               <div class="menu-item" @click="goProfile">个人中心</div>
+              <div class="menu-item" @click="goFavorites">我的收藏</div>
               <div class="menu-item" @click="logout">退出登录</div>
             </div>
           </div>
@@ -109,7 +158,7 @@
     <!-- 全局播放器 -->
     <div v-if="playerState.currentSong" class="global-player">
       <div class="player-left clickable" @click="goToSongDetail">
-        <div class="song-cover">
+        <div class="song-cover" :class="{ spinning: playerState.isPlaying }">
           <img v-if="playerState.currentSong.cover_url" :src="playerState.currentSong.cover_url" alt="封面" class="cover-img" />
           <span v-else class="cover-icon">♪</span>
         </div>
@@ -186,6 +235,12 @@
             <path fill="currentColor" d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
           </svg>
         </button>
+        <!-- 添加到歌单 -->
+        <button class="icon-btn" @click="showAddToPlaylist = true" title="添加到歌单">
+          <svg viewBox="0 0 24 24" width="18" height="18">
+            <path fill="currentColor" d="M14 10H2v2h12v-2zm0-4H2v2h12V6zm4 8v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zM2 16h8v-2H2v2z"/>
+          </svg>
+        </button>
         <!-- 下载 -->
         <a class="icon-btn" :href="playerState.currentSong.download_url" target="_blank" title="下载" @click.stop>
           <svg viewBox="0 0 24 24" width="18" height="18">
@@ -236,6 +291,36 @@
         @pause="playerState.isPlaying = false"
       ></audio>
     </div>
+
+    <!-- 添加到歌单弹窗 -->
+    <div v-if="showAddToPlaylist" class="modal-overlay" @click.self="showAddToPlaylist = false">
+      <div class="modal-content playlist-modal">
+        <div class="modal-header">
+          <h3>添加到歌单</h3>
+          <button class="close-btn" @click="showAddToPlaylist = false">×</button>
+        </div>
+        <div class="modal-body">
+          <div v-if="userPlaylists.length === 0" class="empty-playlists">
+            <p>暂无歌单</p>
+            <button class="create-btn" @click="goToCreatePlaylist">创建歌单</button>
+          </div>
+          <div v-else class="playlist-list">
+            <div 
+              v-for="playlist in userPlaylists" 
+              :key="playlist.id" 
+              class="playlist-item"
+              @click="addSongToPlaylist(playlist.id)"
+            >
+              <div class="playlist-icon">♪</div>
+              <div class="playlist-info">
+                <div class="playlist-name">{{ playlist.name }}</div>
+                <div class="playlist-count">{{ playlist.song_count || 0 }} 首歌曲</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -245,11 +330,11 @@ import { useRouter, useRoute } from "vue-router";
 import { playerState, audioRef, formatDuration, playPrev, playNext, togglePlayMode, setVolume, PLAY_MODES } from "./stores/player";
 import api from "./api";
 
-// 进度条样式（已播放部分绿色，未播放部分灰色）
+// 进度条样式（已播放部分金色，未播放部分灰色）
 const progressStyle = computed(() => {
   const percent = playerState.duration ? (playerState.currentTime / playerState.duration) * 100 : 0;
   return {
-    background: `linear-gradient(to right, #31c27c ${percent}%, #ccc ${percent}%)`
+    background: `linear-gradient(to right, #d4a84b ${percent}%, #ccc ${percent}%)`
   };
 });
 
@@ -267,6 +352,10 @@ const playModeTitle = computed(() => {
 // 是否已收藏
 const isFavorited = ref(false);
 const prevVolume = ref(0.8);
+
+// 添加到歌单相关
+const showAddToPlaylist = ref(false);
+const userPlaylists = ref([]);
 
 // 歌词相关
 const lyrics = ref([]);
@@ -562,8 +651,14 @@ const closeUserMenu = () => {
   showUserMenu.value = false;
 };
 
-// 个人中心（暂时跳转到收藏页）
+// 个人中心
 const goProfile = () => {
+  showUserMenu.value = false;
+  router.push("/profile");
+};
+
+// 我的收藏
+const goFavorites = () => {
   showUserMenu.value = false;
   router.push("/favorites");
 };
@@ -639,75 +734,164 @@ const goSearch = () => {
     });
   }
 };
+
+// 加载用户歌单
+const loadUserPlaylists = async () => {
+  const uid = localStorage.getItem("user_id");
+  if (!uid) return;
+  try {
+    const res = await api.get(`/playlists?user_id=${uid}`);
+    userPlaylists.value = res.data;
+  } catch (e) {
+    userPlaylists.value = [];
+  }
+};
+
+// 添加歌曲到歌单
+const addSongToPlaylist = async (playlistId) => {
+  if (!playerState.currentSong) return;
+  try {
+    await api.post(`/playlists/${playlistId}/songs`, {
+      song_id: playerState.currentSong.id
+    });
+    alert("已添加到歌单");
+    showAddToPlaylist.value = false;
+  } catch (e) {
+    if (e.response?.data?.msg === "song already in playlist") {
+      alert("歌曲已在该歌单中");
+    } else {
+      alert("添加失败");
+    }
+  }
+};
+
+// 跳转到创建歌单页面
+const goToCreatePlaylist = () => {
+  showAddToPlaylist.value = false;
+  router.push("/playlists");
+};
+
+// 监听弹窗打开，加载歌单
+watch(showAddToPlaylist, (val) => {
+  if (val) {
+    const uid = localStorage.getItem("user_id");
+    if (!uid) {
+      alert("请先登录");
+      showAddToPlaylist.value = false;
+      router.push("/login");
+      return;
+    }
+    loadUserPlaylists();
+  }
+});
 </script>
 
 <style scoped>
 .app-root {
   min-height: 100vh;
-  background: #f5f7fa;
+  background-color: #fffef9;
+  /* 水墨竹石淡纹背景 */
+  background-image: 
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 800'%3E%3Cg fill='none' stroke='%232d5a5a' stroke-width='0.5' opacity='0.08'%3E%3Cpath d='M30 800 Q35 600 30 400 Q25 200 35 0'/%3E%3Cpath d='M35 350 Q60 320 45 280'/%3E%3Cpath d='M28 450 Q5 420 15 380'/%3E%3Cpath d='M32 550 Q55 530 48 490'/%3E%3Cpath d='M25 650 Q0 620 12 580'/%3E%3Cpath d='M38 250 Q58 230 52 200'/%3E%3Cpath d='M33 150 Q10 130 18 100'/%3E%3Cellipse cx='80' cy='750' rx='35' ry='20'/%3E%3Cellipse cx='90' cy='730' rx='25' ry='15'/%3E%3Cellipse cx='70' cy='770' rx='20' ry='12'/%3E%3Cpath d='M120 800 Q125 650 118 500 Q122 350 115 200'/%3E%3Cpath d='M118 400 Q140 380 130 350'/%3E%3Cpath d='M122 550 Q100 520 108 480'/%3E%3Cpath d='M116 300 Q138 270 128 240'/%3E%3C/g%3E%3C/svg%3E"),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 800'%3E%3Cg fill='none' stroke='%232d5a5a' stroke-width='0.5' opacity='0.08'%3E%3Cpath d='M170 800 Q165 600 170 400 Q175 200 165 0'/%3E%3Cpath d='M165 350 Q140 320 155 280'/%3E%3Cpath d='M172 450 Q195 420 185 380'/%3E%3Cpath d='M168 550 Q145 530 152 490'/%3E%3Cpath d='M175 650 Q200 620 188 580'/%3E%3Cpath d='M162 250 Q142 230 148 200'/%3E%3Cpath d='M167 150 Q190 130 182 100'/%3E%3Cellipse cx='120' cy='750' rx='35' ry='20'/%3E%3Cellipse cx='110' cy='730' rx='25' ry='15'/%3E%3Cellipse cx='130' cy='770' rx='20' ry='12'/%3E%3Cpath d='M80 800 Q75 650 82 500 Q78 350 85 200'/%3E%3Cpath d='M82 400 Q60 380 70 350'/%3E%3Cpath d='M78 550 Q100 520 92 480'/%3E%3Cpath d='M84 300 Q62 270 72 240'/%3E%3C/g%3E%3C/svg%3E"),
+    linear-gradient(90deg, rgba(230, 244, 234, 0.5) 0%, transparent 12%, transparent 88%, rgba(230, 244, 234, 0.5) 100%);
+  background-position: left top, right top, center;
+  background-repeat: repeat-y, repeat-y, no-repeat;
+  background-size: 200px auto, 200px auto, 100% 100%;
+  background-attachment: fixed, fixed, fixed;
 }
 
-/* 顶部导航栏 */
+/* 顶部导航栏 - 浅青白渐变 */
 .top-bar {
-  height: 64px;
+  height: 68px;
   padding: 0 40px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: #ffffff;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+  background: linear-gradient(180deg, #ffffff 0%, #C8E0E2 100%);
+  box-shadow: 0 2px 12px rgba(200, 224, 226, 0.4);
   position: sticky;
   top: 0;
   z-index: 100;
+  /* 底部金色装饰线 */
+  border-bottom: 2px solid;
+  border-image: linear-gradient(90deg, transparent, #d4a84b 20%, #f0c674 50%, #d4a84b 80%, transparent) 1;
 }
 
 /* 左侧 LOGO 区域 */
 .logo-area {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
 }
 
 .logo-circle {
-  width: 30px;
-  height: 30px;
+  width: 38px;
+  height: 38px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #31c27c, #16a085);
-  color: #fff;
+  background: 
+    radial-gradient(circle at center, #d4a84b 0%, #d4a84b 15%, transparent 16%),
+    radial-gradient(circle at center, #1a1a1a 17%, #1a1a1a 30%, transparent 31%),
+    repeating-radial-gradient(circle at center, transparent 0%, transparent 4%, rgba(255,255,255,0.03) 5%, transparent 6%),
+    linear-gradient(135deg, #2a2a2a 0%, #1a1a1a 50%, #2a2a2a 100%);
+  color: #d4a84b;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 16px;
+  font-size: 12px;
+  font-weight: bold;
+  /* 黑胶唱片效果 */
+  border: 3px solid #2d5a5a;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4), inset 0 0 10px rgba(0,0,0,0.3);
+  position: relative;
 }
 
 .logo-text {
-  font-size: 20px;
+  font-size: 22px;
   font-weight: 700;
-  color: #222;
+  color: #2d5a5a;
+  letter-spacing: 4px;
+  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.5);
 }
 
-/* 中间主导航 */
+/* 中间主导航 - 古典风格 */
 .main-nav {
   display: flex;
   align-items: center;
-  gap: 24px;
+  gap: 8px;
 }
 
 .nav-item {
   font-size: 14px;
-  color: #333;
+  color: #2d5a5a;
   text-decoration: none;
-  padding-bottom: 2px;
-  border-bottom: 2px solid transparent;
+  padding: 8px 16px;
+  border-radius: 2px;
+  transition: all 0.3s ease;
+  position: relative;
+  letter-spacing: 1px;
 }
 
 .nav-item:hover {
-  color: #31c27c;
+  color: #d4a84b;
+  background: rgba(212, 168, 75, 0.15);
 }
 
 .nav-item.active {
-  color: #31c27c;
-  border-color: #31c27c;
+  color: #d4a84b;
+  background: rgba(200, 224, 226, 0.5);
+}
+
+.nav-item.active::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 20px;
+  height: 2px;
+  background: #d4a84b;
+  border-radius: 1px;
 }
 
 /* 右侧区域 */
@@ -717,54 +901,55 @@ const goSearch = () => {
   gap: 16px;
 }
 
-/* 搜索框 */
+/* 搜索框 - 浅青风格 */
 .search-box {
   position: relative;
   display: flex;
   align-items: center;
-  border: 1px solid #e0e0e0;
-  border-radius: 20px;
+  border: 1px solid rgba(45, 90, 90, 0.3);
+  border-radius: 4px;
   overflow: visible;
-  background: #f5f5f5;
+  background: rgba(255, 255, 255, 0.6);
   transition: all 0.3s;
 }
 
 .search-box:focus-within {
-  border-color: #31c27c;
-  background: #fff;
-  box-shadow: 0 2px 8px rgba(49, 194, 124, 0.15);
+  border-color: #d4a84b;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 2px 12px rgba(212, 168, 75, 0.2);
 }
 
 .search-input {
   border: none;
   outline: none;
   padding: 8px 14px;
-  width: 220px;
+  width: 200px;
   font-size: 13px;
   background: transparent;
+  color: #1a1a1a;
 }
 
 .search-input::placeholder {
-  color: #999;
+  color: #888;
 }
 
 .search-btn {
   border: none;
   outline: none;
   width: 36px;
-  height: 32px;
-  background: #31c27c;
+  height: 34px;
+  background: linear-gradient(135deg, rgba(255,255,255,0.4) 0%, #8BA8A8 50%, #7a9999 100%);
   color: #fff;
   cursor: pointer;
-  border-radius: 0 20px 20px 0;
+  border-radius: 0 3px 3px 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: background 0.2s;
+  transition: all 0.3s;
 }
 
 .search-btn:hover {
-  background: #28a86d;
+  background: linear-gradient(135deg, rgba(255,255,255,0.5) 0%, #9ab8b8 50%, #8BA8A8 100%);
 }
 
 /* 搜索下拉列表 */
@@ -774,11 +959,12 @@ const goSearch = () => {
   left: 0;
   right: 0;
   margin-top: 8px;
-  background: #fff;
-  border-radius: 12px;
+  background: #fffef9;
+  border-radius: 8px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
   z-index: 1000;
   overflow: hidden;
+  border: 1px solid rgba(212, 168, 75, 0.2);
 }
 
 .dropdown-section {
@@ -797,7 +983,7 @@ const goSearch = () => {
 .clear-history {
   border: none;
   background: none;
-  color: #31c27c;
+  color: #2d5a5a;
   font-size: 12px;
   cursor: pointer;
 }
@@ -851,59 +1037,68 @@ const goSearch = () => {
   color: #999;
 }
 
-/* 登录/注册按钮区域 */
+/* 登录/注册按钮区域 - 中华风 */
 .auth-area {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   font-size: 13px;
-}
-
-.user-name {
-  color: #666;
 }
 
 .auth-btn {
-  border-radius: 14px;
-  padding: 4px 14px;
-  border: none;
-  background: #31c27c;
+  border-radius: 4px;
+  padding: 6px 18px;
+  border: 1px solid #d4a84b;
+  background: linear-gradient(135deg, #d4a84b, #b8923d);
   color: #fff;
   cursor: pointer;
   font-size: 13px;
+  letter-spacing: 1px;
+  transition: all 0.3s;
+}
+
+.auth-btn:hover {
+  background: linear-gradient(135deg, #e8c478, #d4a84b);
+  box-shadow: 0 2px 8px rgba(212, 168, 75, 0.4);
 }
 
 .auth-btn.ghost {
-  background: #ffffff;
-  color: #31c27c;
-  border: 1px solid #31c27c;
+  background: rgba(255, 255, 255, 0.6);
+  color: #2d5a5a;
+  border: 1px solid rgba(45, 90, 90, 0.3);
+}
+
+.auth-btn.ghost:hover {
+  background: rgba(255, 255, 255, 0.9);
+  border-color: #d4a84b;
 }
 
 /* 用户信息区域 */
 .user-info {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   position: relative;
 }
 
 .user-avatar {
   width: 36px;
   height: 36px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #31c27c, #16a085);
+  border-radius: 4px;
+  background: linear-gradient(135deg, rgba(255,255,255,0.4) 0%, #8BA8A8 50%, #7a9999 100%);
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   overflow: hidden;
-  border: 2px solid #e0e0e0;
+  border: 2px solid #d4a84b;
   transition: all 0.3s;
 }
 
 .user-avatar:hover {
-  border-color: #31c27c;
+  border-color: #f0c674;
   transform: scale(1.05);
+  box-shadow: 0 2px 8px rgba(212, 168, 75, 0.4);
 }
 
 .user-avatar img {
@@ -913,13 +1108,13 @@ const goSearch = () => {
 }
 
 .avatar-text {
-  color: #fff;
+  color: #d4a84b;
   font-size: 14px;
   font-weight: 600;
 }
 
 .user-name {
-  color: #333;
+  color: #2d5a5a;
   font-size: 14px;
   max-width: 100px;
   overflow: hidden;
@@ -932,12 +1127,13 @@ const goSearch = () => {
   top: 100%;
   right: 0;
   margin-top: 8px;
-  background: #fff;
+  background: #fffef9;
   border-radius: 8px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
   overflow: hidden;
   z-index: 1000;
   min-width: 120px;
+  border: 1px solid rgba(212, 168, 75, 0.2);
 }
 
 .menu-item {
@@ -945,45 +1141,48 @@ const goSearch = () => {
   font-size: 14px;
   color: #333;
   cursor: pointer;
-  transition: background 0.2s;
+  transition: all 0.2s;
 }
 
 .menu-item:hover {
-  background: #f5f5f5;
-  color: #31c27c;
+  background: rgba(45, 90, 90, 0.08);
+  color: #2d5a5a;
 }
 
 /* 顶部与页面主体之间的分隔条 */
 .top-bar-divider {
-  height: 12px;
-  background: linear-gradient(to bottom, #f5f7fa, #f5f7fa00);
+  height: 8px;
+  background: linear-gradient(180deg, rgba(200, 224, 226, 0.3) 0%, transparent 100%);
 }
 
 /* 主体容器 */
 .main-container {
   max-width: 1100px;
   margin: 0 auto;
-  padding: 12px 20px 40px;
+  padding: 20px 20px 40px;
 }
 
 .main-container.has-player {
-  padding-bottom: 100px;
+  padding-bottom: 110px;
 }
 
-/* 全局播放器 */
+/* 全局播放器 - 浅青白渐变 */
 .global-player {
   position: fixed;
   bottom: 0;
   left: 0;
   right: 0;
-  height: 70px;
-  background: #fff;
-  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+  height: 76px;
+  background: linear-gradient(180deg, #C8E0E2 0%, #ffffff 100%);
+  box-shadow: 0 -4px 20px rgba(200, 224, 226, 0.4);
   display: flex;
   align-items: center;
-  padding: 0 20px;
+  padding: 0 24px;
   z-index: 1000;
   cursor: pointer;
+  /* 顶部金色装饰线 */
+  border-top: 2px solid;
+  border-image: linear-gradient(90deg, transparent, #d4a84b 20%, #f0c674 50%, #d4a84b 80%, transparent) 1;
 }
 
 .global-player .clickable:hover {
@@ -1011,7 +1210,7 @@ const goSearch = () => {
 
 .lyric-text {
   font-size: 13px;
-  color: #31c27c;
+  color: #d4a84b;
   white-space: nowrap;
   animation: lyricFade 0.3s ease-in-out;
   max-width: 300px;
@@ -1032,26 +1231,54 @@ const goSearch = () => {
 }
 
 .song-cover {
-  width: 50px;
-  height: 50px;
-  border-radius: 6px;
-  background: linear-gradient(135deg, #31c27c, #16a085);
+  width: 54px;
+  height: 54px;
+  border-radius: 50%;
+  background: 
+    radial-gradient(circle at center, #d4a84b 0%, #d4a84b 12%, transparent 13%),
+    radial-gradient(circle at center, #1a1a1a 14%, #1a1a1a 25%, transparent 26%),
+    repeating-radial-gradient(circle at center, transparent 0%, transparent 5%, rgba(255,255,255,0.03) 6%, transparent 7%),
+    linear-gradient(135deg, #2a2a2a 0%, #1a1a1a 50%, #2a2a2a 100%);
   display: flex;
   align-items: center;
   justify-content: center;
   overflow: hidden;
   flex-shrink: 0;
+  border: 3px solid #2d5a5a;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4), inset 0 0 15px rgba(0,0,0,0.3);
+  position: relative;
 }
 
 .song-cover .cover-img {
-  width: 100%;
-  height: 100%;
+  width: 60%;
+  height: 60%;
   object-fit: cover;
+  border-radius: 50%;
+  border: 2px solid #d4a84b;
 }
 
 .cover-icon {
-  color: #fff;
-  font-size: 24px;
+  color: #d4a84b;
+  font-size: 16px;
+  z-index: 1;
+}
+
+/* 黑胶唱片旋转动画 */
+@keyframes vinyl-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.song-cover.spinning {
+  animation: vinyl-spin 8s linear infinite;
+}
+
+.song-cover.spinning:hover {
+  animation-play-state: running;
 }
 
 .song-meta {
@@ -1063,7 +1290,7 @@ const goSearch = () => {
 .song-title {
   font-size: 14px;
   font-weight: 500;
-  color: #333;
+  color: #1a1a1a;
   max-width: 150px;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1072,7 +1299,7 @@ const goSearch = () => {
 
 .song-artist {
   font-size: 12px;
-  color: #999;
+  color: #666;
 }
 
 .player-center {
@@ -1091,21 +1318,25 @@ const goSearch = () => {
 }
 
 .ctrl-btn {
-  width: 40px;
-  height: 40px;
+  width: 44px;
+  height: 44px;
   border: none;
-  background: #31c27c;
+  background: linear-gradient(135deg, rgba(255,255,255,0.4) 0%, #8BA8A8 50%, #7a9999 100%);
   border-radius: 50%;
-  color: #fff;
+  color: #d4a84b;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: transform 0.2s;
+  transition: all 0.3s;
+  border: 2px solid #d4a84b;
+  box-shadow: 0 2px 8px rgba(139, 168, 168, 0.4);
 }
 
 .ctrl-btn:hover {
   transform: scale(1.1);
+  background: linear-gradient(135deg, rgba(255,255,255,0.5) 0%, #9ab8b8 50%, #8BA8A8 100%);
+  box-shadow: 0 4px 12px rgba(139, 168, 168, 0.6);
 }
 
 .progress-wrapper {
@@ -1119,7 +1350,7 @@ const goSearch = () => {
 .time-current,
 .time-total {
   font-size: 12px;
-  color: #999;
+  color: #666;
   min-width: 40px;
 }
 
@@ -1132,7 +1363,7 @@ const goSearch = () => {
   height: 4px;
   -webkit-appearance: none;
   appearance: none;
-  background: rgba(255,255,255,0.3);
+  background: rgba(45, 90, 90, 0.2);
   border-radius: 2px;
   cursor: pointer;
 }
@@ -1141,20 +1372,20 @@ const goSearch = () => {
   -webkit-appearance: none;
   width: 12px;
   height: 12px;
-  background: #31c27c;
+  background: #d4a84b;
   border-radius: 50%;
   cursor: pointer;
-  box-shadow: 0 0 4px rgba(0,0,0,0.2);
+  box-shadow: 0 0 6px rgba(212, 168, 75, 0.5);
 }
 
 .progress-bar::-moz-range-thumb {
   width: 12px;
   height: 12px;
-  background: #31c27c;
+  background: #d4a84b;
   border-radius: 50%;
   cursor: pointer;
   border: none;
-  box-shadow: 0 0 4px rgba(0,0,0,0.2);
+  box-shadow: 0 0 6px rgba(212, 168, 75, 0.5);
 }
 
 .progress-bar::-moz-range-track {
@@ -1178,14 +1409,14 @@ const goSearch = () => {
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 50%;
+  border-radius: 4px;
   transition: all 0.2s;
   text-decoration: none;
 }
 
 .player-right .icon-btn:hover {
-  background: #f0f0f0;
-  color: #31c27c;
+  background: rgba(200, 224, 226, 0.5);
+  color: #d4a84b;
 }
 
 .player-right .icon-btn.active {
@@ -1203,7 +1434,7 @@ const goSearch = () => {
   height: 4px;
   -webkit-appearance: none;
   appearance: none;
-  background: #e0e0e0;
+  background: rgba(45, 90, 90, 0.2);
   border-radius: 2px;
   cursor: pointer;
 }
@@ -1212,20 +1443,150 @@ const goSearch = () => {
   -webkit-appearance: none;
   width: 12px;
   height: 12px;
-  background: #31c27c;
+  background: #d4a84b;
   border-radius: 50%;
   cursor: pointer;
 }
 
 .ctrl-btn.small {
-  width: 32px;
-  height: 32px;
+  width: 34px;
+  height: 34px;
   background: transparent;
-  color: #666;
+  color: rgba(255, 255, 255, 0.6);
+  border: none;
 }
 
 .ctrl-btn.small:hover {
-  color: #31c27c;
+  color: #d4a84b;
   transform: none;
+}
+
+/* 弹窗样式 - 中华风 */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+}
+
+.modal-content {
+  background: #fffef9;
+  border-radius: 8px;
+  width: 360px;
+  max-height: 80vh;
+  overflow: hidden;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(212, 168, 75, 0.3);
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  border-bottom: 1px solid rgba(212, 168, 75, 0.2);
+  background: linear-gradient(180deg, #faf8f5 0%, #fffef9 100%);
+}
+
+.modal-header h3 {
+  margin: 0;
+  font-size: 16px;
+  color: #333;
+}
+
+.close-btn {
+  border: none;
+  background: none;
+  font-size: 24px;
+  color: #999;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.close-btn:hover {
+  color: #333;
+}
+
+.modal-body {
+  padding: 16px 20px;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.empty-playlists {
+  text-align: center;
+  padding: 30px 0;
+}
+
+.empty-playlists p {
+  color: #999;
+  margin-bottom: 16px;
+}
+
+.create-btn {
+  padding: 8px 20px;
+  background: linear-gradient(135deg, #d4a84b, #b8923d);
+  color: #fff;
+  border: none;
+  border-radius: 20px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.create-btn:hover {
+  background: linear-gradient(135deg, #e8c478, #d4a84b);
+}
+
+.playlist-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.playlist-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.playlist-item:hover {
+  background: #E6F4EA;
+}
+
+.playlist-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 6px;
+  background: linear-gradient(135deg, #d4a84b, #b8923d);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+}
+
+.playlist-info {
+  flex: 1;
+}
+
+.playlist-name {
+  font-size: 14px;
+  color: #333;
+  margin-bottom: 2px;
+}
+
+.playlist-count {
+  font-size: 12px;
+  color: #999;
 }
 </style>

@@ -25,6 +25,9 @@ class User(db.Model):
     password = db.Column(db.String(128), nullable=False)
     is_admin = db.Column(db.Boolean, default=False)
     avatar_path = db.Column(db.String(300), nullable=True)  # 头像路径
+    gender = db.Column(db.String(10), nullable=True)  # 性别: male/female/other
+    birthday = db.Column(db.String(20), nullable=True)  # 生日: YYYY-MM-DD
+    region = db.Column(db.String(100), nullable=True)  # 地区
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 
@@ -32,6 +35,7 @@ class Song(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(200), nullable=False)
     artist = db.Column(db.String(200))
+    artist_id = db.Column(db.Integer, db.ForeignKey("artist.id"), nullable=True)
     album = db.Column(db.String(200))
     duration = db.Column(db.Integer)
     genre = db.Column(db.String(100))
@@ -40,6 +44,8 @@ class Song(db.Model):
     cover_path = db.Column(db.String(300))
     release_date = db.Column(db.String(20))
     file_path = db.Column(db.String(300), nullable=False)
+    play_count = db.Column(db.Integer, default=0)
+    like_count = db.Column(db.Integer, default=0)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 
@@ -68,6 +74,79 @@ class Announcement(db.Model):
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 
+# ========== 新增模型 ==========
+class SongLike(db.Model):
+    """歌曲点赞"""
+    id = db.Column(db.Integer, primary_key=True)
+    song_id = db.Column(db.Integer, db.ForeignKey("song.id"))
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+
+class Playlist(db.Model):
+    """歌单"""
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"))
+    name = db.Column(db.String(200), nullable=False)
+    description = db.Column(db.Text)
+    cover_path = db.Column(db.String(300))
+    is_public = db.Column(db.Boolean, default=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class PlaylistSong(db.Model):
+    """歌单-歌曲关联"""
+    id = db.Column(db.Integer, primary_key=True)
+    playlist_id = db.Column(db.Integer, db.ForeignKey("playlist.id"))
+    song_id = db.Column(db.Integer, db.ForeignKey("song.id"))
+    added_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+
+class Artist(db.Model):
+    """歌手"""
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(200), nullable=False)
+    avatar_path = db.Column(db.String(300))
+    description = db.Column(db.Text)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+
+class ArtistFollow(db.Model):
+    """歌手关注"""
+    id = db.Column(db.Integer, primary_key=True)
+    artist_id = db.Column(db.Integer, db.ForeignKey("artist.id"))
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+
+class PlayHistory(db.Model):
+    """播放历史"""
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"))
+    song_id = db.Column(db.Integer, db.ForeignKey("song.id"))
+    play_progress = db.Column(db.Integer, default=0)  # 播放进度（秒）
+    played_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+
+class SearchHistory(db.Model):
+    """搜索历史"""
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"))
+    keyword = db.Column(db.String(200), nullable=False)
+    searched_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+
+class RankHistory(db.Model):
+    """排行榜历史记录 - 用于计算排名变化"""
+    id = db.Column(db.Integer, primary_key=True)
+    song_id = db.Column(db.Integer, db.ForeignKey("song.id"))
+    rank = db.Column(db.Integer, nullable=False)  # 排名
+    play_count = db.Column(db.Integer, default=0)  # 当时的播放次数
+    record_date = db.Column(db.Date, nullable=False)  # 记录日期
+    created_at = db.Column(db.DateTime, default=datetime.now)
+
+
 def create_tables_and_seed():
     db.create_all()
     if Song.query.count() == 0:
@@ -90,6 +169,7 @@ def song_to_dict(song: Song, base_url: str):
         "id": song.id,
         "title": song.title,
         "artist": song.artist,
+        "artist_id": song.artist_id,
         "album": song.album,
         "duration": song.duration,
         "genre": song.genre,
@@ -97,6 +177,8 @@ def song_to_dict(song: Song, base_url: str):
         "lyrics": song.lyrics,
         "cover_url": cover_url,
         "release_date": song.release_date,
+        "play_count": song.play_count or 0,
+        "like_count": song.like_count or 0,
         "play_url": f"{base_url}/api/songs/{song.id}/play",
         "download_url": f"{base_url}/api/songs/{song.id}/download",
     }
@@ -209,6 +291,19 @@ def admin_update_song(song_id):
         return auth_resp
     song = Song.query.get_or_404(song_id)
     data = request.json or {}
+    
+    # AI内容审核 - 审核歌词内容
+    lyrics = data.get("lyrics")
+    if lyrics and len(lyrics) > 10:  # 只审核有实际内容的歌词
+        from ai_service import content_moderation
+        moderation_result = content_moderation(lyrics[:2000], "lyrics")  # 限制审核长度
+        if not moderation_result.get("passed", True):
+            return jsonify({
+                "msg": "歌词内容审核未通过",
+                "reason": moderation_result.get("reason", "歌词包含违规信息"),
+                "risk_level": moderation_result.get("risk_level", "medium")
+            }), 400
+    
     if data.get("title") is not None:
         song.title = data.get("title")
     if data.get("artist") is not None:
@@ -219,8 +314,8 @@ def admin_update_song(song_id):
         song.tags = data.get("tags")
     if data.get("album") is not None:
         song.album = data.get("album")
-    if data.get("lyrics") is not None:
-        song.lyrics = data.get("lyrics")
+    if lyrics is not None:
+        song.lyrics = lyrics
     if data.get("release_date") is not None:
         song.release_date = data.get("release_date")
     db.session.commit()
@@ -253,13 +348,25 @@ def admin_delete_song(song_id):
         return auth_resp
     song = Song.query.get_or_404(song_id)
     try:
+        # 删除所有关联记录
         Favorite.query.filter_by(song_id=song_id).delete()
         Comment.query.filter_by(song_id=song_id).delete()
+        PlayHistory.query.filter_by(song_id=song_id).delete()
+        SongLike.query.filter_by(song_id=song_id).delete()
+        PlaylistSong.query.filter_by(song_id=song_id).delete()
+        RankHistory.query.filter_by(song_id=song_id).delete()
+        # 删除音频文件
         if song.file_path and os.path.exists(song.file_path):
             try:
                 os.remove(song.file_path)
             except Exception as e:
                 print("删除文件失败:", e)
+        # 删除封面文件
+        if song.cover_path and os.path.exists(song.cover_path):
+            try:
+                os.remove(song.cover_path)
+            except Exception as e:
+                print("删除封面失败:", e)
         db.session.delete(song)
         db.session.commit()
         return jsonify({"msg": "deleted"})
@@ -288,6 +395,17 @@ def add_comment(song_id):
     content = data.get("content")
     if not user_id or not content:
         return jsonify({"msg": "user_id and content required"}), 400
+    
+    # AI内容审核
+    from ai_service import content_moderation
+    moderation_result = content_moderation(content, "comment")
+    if not moderation_result.get("passed", True):
+        return jsonify({
+            "msg": "评论内容审核未通过",
+            "reason": moderation_result.get("reason", "内容包含违规信息"),
+            "risk_level": moderation_result.get("risk_level", "medium")
+        }), 400
+    
     comment = Comment(song_id=song_id, user_id=user_id, content=content)
     db.session.add(comment)
     db.session.commit()
@@ -368,6 +486,9 @@ def get_user_info(user_id):
         "username": user.username,
         "is_admin": user.is_admin,
         "avatar_url": avatar_url,
+        "gender": user.gender,
+        "birthday": user.birthday,
+        "region": user.region,
         "created_at": user.created_at.isoformat() if user.created_at else None
     })
 
@@ -586,7 +707,19 @@ def upload_song():
     return jsonify({"msg": "upload success", "song": song_to_dict(song, base_url)})
 
 
+# 注册扩展API（必须在 if __name__ 之前，传入所有需要的模型避免循环导入）
+from api_extensions import register_extensions
+register_extensions(
+    app, db, Song, User, require_admin,
+    Favorite, Playlist, PlaylistSong, PlayHistory, SongLike, SearchHistory, song_to_dict
+)
+
+# 注册AI功能API
+from ai_routes import register_ai_routes
+register_ai_routes(app, db, Song, User, Favorite, PlayHistory, song_to_dict)
+
+
 if __name__ == "__main__":
     with app.app_context():
         create_tables_and_seed()
-    app.run(host="0.0.0.0", port=5000, debug=True)
+    app.run(host="127.0.0.1", port=5000, debug=True)

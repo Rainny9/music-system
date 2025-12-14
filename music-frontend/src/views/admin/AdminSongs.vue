@@ -1,27 +1,5 @@
 <template>
   <div class="admin-container">
-    <!-- 后台导航标签 -->
-    <div class="admin-tabs">
-      <router-link to="/admin/songs" class="tab-item" :class="{ active: $route.path === '/admin/songs' }">
-        <svg viewBox="0 0 24 24" width="18" height="18">
-          <path fill="currentColor" d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/>
-        </svg>
-        歌曲管理
-      </router-link>
-      <router-link to="/admin/users" class="tab-item" :class="{ active: $route.path === '/admin/users' }">
-        <svg viewBox="0 0 24 24" width="18" height="18">
-          <path fill="currentColor" d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/>
-        </svg>
-        用户管理
-      </router-link>
-      <router-link to="/admin/announcements" class="tab-item" :class="{ active: $route.path === '/admin/announcements' }">
-        <svg viewBox="0 0 24 24" width="18" height="18">
-          <path fill="currentColor" d="M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-7 9h-2V5h2v6zm0 4h-2v-2h2v2z"/>
-        </svg>
-        公告管理
-      </router-link>
-    </div>
-
     <div class="admin-header">
       <h2>后台歌曲管理</h2>
       <span class="admin-info">当前管理员ID：{{ adminUserId }}</span>
@@ -132,12 +110,12 @@
                 <input type="file" accept="audio/*" @change="onFileChange" ref="fileInput" />
                 <div class="file-upload-content">
                   <svg v-if="!uploadForm.file" viewBox="0 0 24 24" width="40" height="40">
-                    <path fill="#31c27c" d="M9 16h6v-6h4l-7-7-7 7h4zm-4 2h14v2H5z"/>
+                    <path fill="#d4a84b" d="M9 16h6v-6h4l-7-7-7 7h4zm-4 2h14v2H5z"/>
                   </svg>
                   <p v-if="!uploadForm.file">点击或拖拽文件到此处上传</p>
                   <p v-else class="file-name">
                     <svg viewBox="0 0 24 24" width="20" height="20">
-                      <path fill="#31c27c" d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/>
+                      <path fill="#d4a84b" d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/>
                     </svg>
                     {{ uploadForm.file.name }}
                   </p>
@@ -220,6 +198,16 @@
             <button class="modal-close" @click="closeDetailEditor">×</button>
           </div>
           <div class="modal-body">
+            <!-- AI自动填充按钮 -->
+            <div class="ai-fetch-bar">
+              <button class="btn-ai-fetch" @click="fetchSongInfoByAI" :disabled="fetchingInfo">
+                <svg viewBox="0 0 24 24" width="16" height="16">
+                  <path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                </svg>
+                {{ fetchingInfo ? 'AI搜索中...' : 'AI自动填充' }}
+              </button>
+              <span class="ai-hint">点击自动获取专辑、发行时间、歌词等信息</span>
+            </div>
             <div class="detail-layout">
               <div class="cover-section">
                 <label>封面图片</label>
@@ -387,10 +375,12 @@ const editingTags = ref({
 // 详情编辑弹窗
 const showDetailEditor = ref(false);
 const savingDetail = ref(false);
+const fetchingInfo = ref(false);
 const coverInput = ref(null);
 const detailForm = ref({
   id: null,
   title: "",
+  artist: "",
   album: "",
   release_date: "",
   lyrics: "",
@@ -467,6 +457,7 @@ const openDetailEditor = (song) => {
   detailForm.value = {
     id: song.id,
     title: song.title,
+    artist: song.artist || song.editArtist || "",
     album: song.album || "",
     release_date: song.release_date || "",
     lyrics: song.lyrics || "",
@@ -483,6 +474,7 @@ const closeDetailEditor = () => {
   detailForm.value = {
     id: null,
     title: "",
+    artist: "",
     album: "",
     release_date: "",
     lyrics: "",
@@ -490,6 +482,53 @@ const closeDetailEditor = () => {
     coverPreview: "",
     coverFile: null,
   };
+};
+
+// AI自动获取歌曲信息
+const fetchSongInfoByAI = async () => {
+  if (!detailForm.value.title) {
+    msg.value = "歌曲名称不能为空";
+    msgType.value = "error";
+    return;
+  }
+  
+  fetchingInfo.value = true;
+  msg.value = "AI正在搜索歌曲信息，请稍候...";
+  msgType.value = "success";
+  
+  try {
+    const res = await api.post("/ai/fetch-song-info", {
+      title: detailForm.value.title,
+      artist: detailForm.value.artist
+    });
+    
+    if (res.data.success && res.data.data) {
+      const info = res.data.data;
+      
+      // 填充表单
+      if (info.album) {
+        detailForm.value.album = info.album;
+      }
+      if (info.release_date) {
+        detailForm.value.release_date = info.release_date;
+      }
+      if (info.lyrics) {
+        // 处理歌词换行
+        detailForm.value.lyrics = info.lyrics.replace(/\\n/g, '\n');
+      }
+      
+      msg.value = "AI已自动填充歌曲信息";
+      msgType.value = "success";
+    } else {
+      msg.value = res.data.error || "获取歌曲信息失败";
+      msgType.value = "error";
+    }
+  } catch (e) {
+    msg.value = e.response?.data?.error || "AI搜索失败，请稍后重试";
+    msgType.value = "error";
+  } finally {
+    fetchingInfo.value = false;
+  }
 };
 
 // 触发封面上传
@@ -532,7 +571,12 @@ const saveDetail = async () => {
     closeDetailEditor();
     loadSongs();
   } catch (e) {
-    msg.value = e.response?.data?.msg || "保存失败";
+    const data = e.response?.data;
+    if (data?.reason) {
+      msg.value = `${data.msg}：${data.reason}`;
+    } else {
+      msg.value = data?.msg || "保存失败";
+    }
     msgType.value = "error";
   } finally {
     savingDetail.value = false;
@@ -687,82 +731,70 @@ onMounted(() => {
 </script>
 
 <style scoped>
+/* 中华文化主题 - 歌曲管理 */
 .admin-container {
+  padding: 20px;
+  padding-bottom: 100px;
   max-width: 1200px;
   margin: 0 auto;
-  padding: 20px;
-  min-height: 100vh;
-}
-
-.admin-tabs {
-  display: flex;
-  gap: 4px;
-  margin-bottom: 20px;
-  background: #fff;
-  padding: 6px;
-  border-radius: 10px;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
-}
-
-.tab-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 20px;
-  border-radius: 8px;
-  font-size: 14px;
-  color: #666;
-  text-decoration: none;
-  transition: all 0.2s;
-}
-
-.tab-item:hover {
-  background: #f5f5f5;
-  color: #333;
-}
-
-.tab-item.active {
-  background: #31c27c;
-  color: #fff;
+  background: rgba(255, 254, 249, 0.85);
 }
 
 .admin-header {
   display: flex;
   align-items: baseline;
   gap: 20px;
-  margin-bottom: 20px;
-  padding-bottom: 15px;
-  border-bottom: 2px solid #31c27c;
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 2px solid rgba(212, 168, 75, 0.3);
 }
 
 .admin-header h2 {
   margin: 0;
-  font-size: 24px;
-  color: #333;
+  font-size: 22px;
+  font-weight: 600;
+  color: #1a1a1a;
+  letter-spacing: 2px;
+  position: relative;
+  padding-left: 14px;
+}
+
+.admin-header h2::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 4px;
+  height: 22px;
+  background: linear-gradient(180deg, #2d5a5a, #d4a84b);
+  border-radius: 2px;
 }
 
 .admin-info {
   font-size: 14px;
-  color: #666;
+  color: #8b7355;
 }
 
 .no-auth {
   text-align: center;
   padding: 60px 20px;
-  background: #fff;
+  background: #fffef9;
   border-radius: 8px;
+  border: 1px solid rgba(212, 168, 75, 0.2);
 }
 
 .no-auth p {
-  color: #ff6b6b;
+  color: #dc3545;
   font-size: 16px;
   margin-top: 15px;
 }
 
 .admin-content {
-  background: #fff;
+  background: linear-gradient(180deg, #fffef9 0%, #E6F4EA 100%);
   border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  box-shadow: 0 2px 12px rgba(212, 168, 75, 0.1);
+  border: 1px solid rgba(212, 168, 75, 0.2);
 }
 
 /* 统计信息 */
@@ -770,8 +802,9 @@ onMounted(() => {
   display: flex;
   gap: 30px;
   padding: 20px;
-  background: linear-gradient(135deg, #31c27c 0%, #28a86d 100%);
+  background: linear-gradient(135deg, #E6F4EA 0%, #d4a84b 100%);
   border-radius: 8px 8px 0 0;
+  border-bottom: 3px solid #d4a84b;
 }
 
 .stat-item {
@@ -783,12 +816,12 @@ onMounted(() => {
 .stat-value {
   font-size: 28px;
   font-weight: 600;
-  color: #fff;
+  color: #2d5a5a;
 }
 
 .stat-label {
   font-size: 13px;
-  color: rgba(255,255,255,0.8);
+  color: #2d5a5a;
   margin-top: 4px;
 }
 
@@ -803,23 +836,24 @@ onMounted(() => {
 }
 
 .admin-table th {
-  background: #f8f9fa;
+  background: linear-gradient(135deg, rgba(212, 168, 75, 0.1), rgba(212, 168, 75, 0.05));
   padding: 14px 12px;
   text-align: left;
   font-size: 13px;
-  color: #666;
-  font-weight: 500;
-  border-bottom: 1px solid #e9ecef;
+  color: #8b7355;
+  font-weight: 600;
+  border-bottom: 1px solid rgba(212, 168, 75, 0.2);
+  letter-spacing: 1px;
 }
 
 .admin-table td {
   padding: 12px;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid rgba(212, 168, 75, 0.1);
   vertical-align: middle;
 }
 
 .admin-table tr:hover {
-  background: #fafafa;
+  background: rgba(45, 90, 90, 0.02);
 }
 
 .col-id {
@@ -867,47 +901,49 @@ onMounted(() => {
 }
 
 .action-btn.detail {
-  background: #e6f7ff;
-  color: #1890ff;
+  background: rgba(212, 168, 75, 0.1);
+  color: #d4a84b;
 }
 
 .action-btn.detail:hover {
-  background: #1890ff;
+  background: #d4a84b;
   color: #fff;
 }
 
 .action-btn.save {
-  background: #f6ffed;
-  color: #52c41a;
+  background: rgba(46, 125, 50, 0.1);
+  color: #2e7d32;
 }
 
 .action-btn.save:hover {
-  background: #52c41a;
+  background: #2e7d32;
   color: #fff;
 }
 
 .action-btn.delete {
-  background: #fff1f0;
-  color: #ff4d4f;
+  background: rgba(220, 53, 69, 0.1);
+  color: #dc3545;
 }
 
 .action-btn.delete:hover {
-  background: #ff4d4f;
+  background: #dc3545;
   color: #fff;
 }
 
 .edit-input {
   width: 100%;
   padding: 8px 10px;
-  border: 1px solid #e0e0e0;
+  border: 1px solid rgba(212, 168, 75, 0.3);
   border-radius: 4px;
   font-size: 13px;
-  transition: border-color 0.2s;
+  transition: all 0.3s;
+  background: #fff;
 }
 
 .edit-input:focus {
   outline: none;
-  border-color: #31c27c;
+  border-color: #d4a84b;
+  box-shadow: 0 0 0 3px rgba(212, 168, 75, 0.1);
 }
 
 
@@ -915,24 +951,27 @@ onMounted(() => {
 .empty-state {
   padding: 40px;
   text-align: center;
-  color: #999;
+  color: #8b7355;
 }
 
 .message {
   padding: 12px 20px;
   margin: 15px;
-  border-radius: 4px;
+  border-radius: 6px;
   font-size: 14px;
+  border: 1px solid;
 }
 
 .message.success {
-  background: #e8f5e9;
+  background: rgba(46, 125, 50, 0.1);
   color: #2e7d32;
+  border-color: rgba(46, 125, 50, 0.2);
 }
 
 .message.error {
-  background: #ffebee;
-  color: #c62828;
+  background: rgba(220, 53, 69, 0.1);
+  color: #dc3545;
+  border-color: rgba(220, 53, 69, 0.2);
 }
 
 /* 添加按钮 */
@@ -941,18 +980,19 @@ onMounted(() => {
   align-items: center;
   gap: 6px;
   padding: 10px 20px;
-  background: #fff;
-  color: #31c27c;
-  border: none;
+  background: rgba(255, 255, 255, 0.9);
+  color: #2d5a5a;
+  border: 1px solid #d4a84b;
   border-radius: 20px;
   font-size: 14px;
   cursor: pointer;
   margin-left: auto;
-  transition: all 0.2s;
+  transition: all 0.3s;
 }
 
 .btn-add:hover {
-  background: #f0fff0;
+  background: #fff;
+  box-shadow: 0 2px 8px rgba(212, 168, 75, 0.3);
 }
 
 /* 弹窗样式 */
@@ -962,57 +1002,69 @@ onMounted(() => {
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(26, 26, 26, 0.6);
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1000;
+  z-index: 2000;
 }
 
 .modal-content {
-  background: #fff;
+  background: #fffef9;
   border-radius: 12px;
   width: 500px;
   max-width: 90%;
   max-height: 90vh;
   overflow-y: auto;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 10px 40px rgba(45, 90, 90, 0.15);
+  border: 1px solid rgba(212, 168, 75, 0.3);
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.modal-content::-webkit-scrollbar {
+  display: none;
 }
 
 .modal-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 20px;
-  border-bottom: 1px solid #f0f0f0;
+  padding: 18px 24px;
+  border-bottom: 1px solid rgba(212, 168, 75, 0.2);
+  background: linear-gradient(135deg, rgba(212, 168, 75, 0.05), transparent);
 }
 
 .modal-header h3 {
   margin: 0;
-  font-size: 18px;
-  color: #333;
+  font-size: 17px;
+  font-weight: 600;
+  color: #1a1a1a;
+  letter-spacing: 1px;
 }
 
 .modal-close {
   width: 32px;
   height: 32px;
   border: none;
-  background: #f5f5f5;
+  background: rgba(212, 168, 75, 0.1);
   border-radius: 50%;
   font-size: 20px;
   cursor: pointer;
-  color: #666;
+  color: #8b7355;
   display: flex;
   align-items: center;
   justify-content: center;
+  transition: all 0.2s;
 }
 
 .modal-close:hover {
-  background: #e0e0e0;
+  background: rgba(45, 90, 90, 0.1);
+  color: #2d5a5a;
 }
 
 .modal-body {
-  padding: 20px;
+  padding: 24px;
 }
 
 .form-group {
@@ -1022,28 +1074,30 @@ onMounted(() => {
 .form-group label {
   display: block;
   font-size: 14px;
-  color: #333;
+  color: #1a1a1a;
   margin-bottom: 8px;
   font-weight: 500;
 }
 
 .required {
-  color: #ff6b6b;
+  color: #dc3545;
 }
 
 .form-input {
   width: 100%;
   padding: 10px 12px;
-  border: 1px solid #e0e0e0;
+  border: 1px solid rgba(212, 168, 75, 0.3);
   border-radius: 6px;
   font-size: 14px;
-  transition: border-color 0.2s;
+  transition: all 0.3s;
   box-sizing: border-box;
+  background: #fff;
 }
 
 .form-input:focus {
   outline: none;
-  border-color: #31c27c;
+  border-color: #d4a84b;
+  box-shadow: 0 0 0 3px rgba(212, 168, 75, 0.1);
 }
 
 .form-row {
@@ -1058,22 +1112,23 @@ onMounted(() => {
 /* 文件上传区域 */
 .file-upload {
   position: relative;
-  border: 2px dashed #e0e0e0;
+  border: 2px dashed rgba(212, 168, 75, 0.3);
   border-radius: 8px;
   padding: 30px;
   text-align: center;
-  transition: all 0.2s;
+  transition: all 0.3s;
   cursor: pointer;
+  background: rgba(212, 168, 75, 0.02);
 }
 
 .file-upload:hover {
-  border-color: #31c27c;
-  background: #f9fff9;
+  border-color: #d4a84b;
+  background: rgba(212, 168, 75, 0.05);
 }
 
 .file-upload.has-file {
-  border-color: #31c27c;
-  background: #f0fff0;
+  border-color: #2d5a5a;
+  background: rgba(45, 90, 90, 0.05);
 }
 
 .file-upload input[type="file"] {
@@ -1089,7 +1144,11 @@ onMounted(() => {
 .file-upload-content p {
   margin: 10px 0 0;
   font-size: 14px;
-  color: #666;
+  color: #8b7355;
+}
+
+.file-upload-content svg path {
+  fill: #d4a84b;
 }
 
 .file-name {
@@ -1097,50 +1156,61 @@ onMounted(() => {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  color: #31c27c !important;
+  color: #2d5a5a !important;
   font-weight: 500;
+}
+
+.file-name svg path {
+  fill: #2d5a5a;
 }
 
 .modal-footer {
   display: flex;
   justify-content: flex-end;
   gap: 12px;
-  padding: 15px 20px;
-  border-top: 1px solid #f0f0f0;
-  background: #fafafa;
+  padding: 16px 24px;
+  border-top: 1px solid rgba(212, 168, 75, 0.2);
+  background: rgba(212, 168, 75, 0.03);
   border-radius: 0 0 12px 12px;
 }
 
 .btn-cancel {
   padding: 10px 24px;
-  background: #fff;
-  color: #666;
-  border: 1px solid #ddd;
+  background: #fffef9;
+  color: #8b7355;
+  border: 1px solid rgba(212, 168, 75, 0.3);
   border-radius: 6px;
   font-size: 14px;
   cursor: pointer;
+  transition: all 0.3s;
 }
 
 .btn-cancel:hover {
-  background: #f5f5f5;
+  border-color: #d4a84b;
+  color: #d4a84b;
 }
 
 .btn-submit {
   padding: 10px 24px;
-  background: #31c27c;
-  color: #fff;
-  border: none;
+  background: linear-gradient(135deg, #E6F4EA 0%, #d4a84b 100%);
+  color: #2d5a5a;
+  border: 1px solid #d4a84b;
   border-radius: 6px;
   font-size: 14px;
   cursor: pointer;
+  transition: all 0.3s;
 }
 
 .btn-submit:hover:not(:disabled) {
-  background: #28a86d;
+  background: linear-gradient(135deg, #d4a84b 0%, #e8c478 100%);
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(212, 168, 75, 0.4);
 }
 
 .btn-submit:disabled {
   background: #ccc;
+  border-color: #ccc;
+  color: #999;
   cursor: not-allowed;
 }
 
@@ -1153,45 +1223,47 @@ onMounted(() => {
 
 .tag-item {
   padding: 6px 14px;
-  background: #f5f5f5;
-  border: 1px solid #e0e0e0;
+  background: rgba(212, 168, 75, 0.05);
+  border: 1px solid rgba(212, 168, 75, 0.3);
   border-radius: 16px;
   font-size: 13px;
-  color: #666;
+  color: #8b7355;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.3s;
 }
 
 .tag-item:hover {
-  border-color: #31c27c;
-  color: #31c27c;
+  border-color: #d4a84b;
+  color: #d4a84b;
+  background: rgba(212, 168, 75, 0.1);
 }
 
 .tag-item.selected {
-  background: #31c27c;
-  border-color: #31c27c;
-  color: #fff;
+  background: linear-gradient(135deg, #E6F4EA 0%, #d4a84b 100%);
+  border-color: #d4a84b;
+  color: #2d5a5a;
 }
 
 /* 标签编辑按钮 */
 .tag-edit-btn {
   width: 100%;
   padding: 8px 10px;
-  background: #f9f9f9;
-  border: 1px solid #e0e0e0;
+  background: rgba(212, 168, 75, 0.05);
+  border: 1px solid rgba(212, 168, 75, 0.3);
   border-radius: 4px;
   font-size: 12px;
-  color: #666;
+  color: #8b7355;
   cursor: pointer;
   text-align: left;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  transition: all 0.3s;
 }
 
 .tag-edit-btn:hover {
-  border-color: #31c27c;
-  color: #31c27c;
+  border-color: #d4a84b;
+  color: #d4a84b;
 }
 
 /* 分类编辑弹窗 */
@@ -1205,13 +1277,57 @@ onMounted(() => {
 
 .tag-editor-modal .form-group label {
   font-size: 13px;
-  color: #666;
+  color: #8b7355;
   margin-bottom: 6px;
 }
 
 /* 详情编辑弹窗 */
 .detail-editor-modal {
   width: 700px;
+}
+
+/* AI自动填充栏 */
+.ai-fetch-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: linear-gradient(135deg, rgba(45, 90, 90, 0.05), rgba(212, 168, 75, 0.05));
+  border: 1px solid rgba(212, 168, 75, 0.2);
+  border-radius: 8px;
+  margin-bottom: 20px;
+}
+
+.btn-ai-fetch {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  background: linear-gradient(135deg, rgba(255,255,255,0.4) 0%, #8BA8A8 50%, #7a9999 100%);
+  color: #d4a84b;
+  border: 1px solid #d4a84b;
+  border-radius: 6px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.3s;
+  white-space: nowrap;
+}
+
+.btn-ai-fetch:hover:not(:disabled) {
+  background: linear-gradient(135deg, rgba(255,255,255,0.5) 0%, #9ab8b8 50%, #8BA8A8 100%);
+  box-shadow: 0 4px 12px rgba(139, 168, 168, 0.4);
+}
+
+.btn-ai-fetch:disabled {
+  background: #ccc;
+  border-color: #ccc;
+  color: #999;
+  cursor: not-allowed;
+}
+
+.ai-hint {
+  font-size: 13px;
+  color: #8b7355;
 }
 
 .detail-layout {
@@ -1227,7 +1343,7 @@ onMounted(() => {
 .cover-section label {
   display: block;
   font-size: 14px;
-  color: #333;
+  color: #1a1a1a;
   margin-bottom: 8px;
   font-weight: 500;
 }
@@ -1235,15 +1351,16 @@ onMounted(() => {
 .cover-preview {
   width: 180px;
   height: 180px;
-  border: 2px dashed #e0e0e0;
+  border: 2px dashed rgba(212, 168, 75, 0.3);
   border-radius: 8px;
   overflow: hidden;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.3s;
+  background: rgba(212, 168, 75, 0.02);
 }
 
 .cover-preview:hover {
-  border-color: #31c27c;
+  border-color: #d4a84b;
 }
 
 .cover-preview img {
@@ -1260,8 +1377,12 @@ onMounted(() => {
   align-items: center;
   justify-content: center;
   gap: 10px;
-  color: #999;
+  color: #8b7355;
   font-size: 13px;
+}
+
+.cover-placeholder svg path {
+  fill: #d4a84b;
 }
 
 .info-section {
@@ -1271,18 +1392,21 @@ onMounted(() => {
 .form-textarea {
   width: 100%;
   padding: 12px;
-  border: 1px solid #e0e0e0;
+  border: 1px solid rgba(212, 168, 75, 0.3);
   border-radius: 6px;
   font-size: 14px;
   line-height: 1.6;
   resize: vertical;
   box-sizing: border-box;
   font-family: inherit;
+  background: #fff;
+  transition: all 0.3s;
 }
 
 .form-textarea:focus {
   outline: none;
-  border-color: #31c27c;
+  border-color: #d4a84b;
+  box-shadow: 0 0 0 3px rgba(212, 168, 75, 0.1);
 }
 
 
