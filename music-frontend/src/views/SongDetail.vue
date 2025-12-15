@@ -17,9 +17,7 @@
           alt="封面"
           class="cover-img"
         />
-        <div v-else class="cover-placeholder">
-          {{ song.title?.slice(0, 2) || "歌" }}
-        </div>
+        <div v-else class="cover-placeholder">♪</div>
       </div>
 
       <!-- 右侧歌曲信息 -->
@@ -81,10 +79,49 @@
         <ul class="comment-list">
           <li v-for="c in comments" :key="c.id" class="comment-item">
             <div class="comment-meta">
-              用户 {{ c.user_id }} · {{ c.created_at }}
+              {{ c.username }} · {{ c.created_at }}<span v-if="c.location" class="comment-location"> · IP属地：{{ c.location }}</span>
             </div>
-            <div class="comment-content">
-              {{ c.content }}
+            <div class="comment-content">{{ c.content }}</div>
+            <div class="comment-actions">
+              <span class="action-btn like-btn" :class="{ liked: c.is_liked }" @click="toggleLike(c)">
+                <svg viewBox="0 0 24 24" width="14" height="14"><path fill="currentColor" d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+                {{ c.like_count || 0 }}
+              </span>
+              <span class="action-btn reply-btn" @click="showReplyInput(c)">
+                <svg viewBox="0 0 24 24" width="14" height="14"><path fill="currentColor" d="M10 9V5l-7 7 7 7v-4.1c5 0 8.5 1.6 11 5.1-1-5-4-10-11-11z"/></svg>
+                回复 {{ c.reply_count || 0 }}
+              </span>
+              <span v-if="canDeleteComment(c)" class="action-btn delete-btn" @click="deleteComment(c)">
+                <svg viewBox="0 0 24 24" width="14" height="14"><path fill="currentColor" d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+                删除
+              </span>
+            </div>
+            <!-- 回复输入框 -->
+            <div v-if="replyingTo === c.id" class="reply-input-box">
+              <textarea v-model="replyText" :placeholder="'回复 ' + c.username + '……'" rows="2"></textarea>
+              <div class="reply-btns">
+                <button class="btn small" @click="cancelReply">取消</button>
+                <button class="btn small primary" @click="submitReply(c)">发送</button>
+              </div>
+            </div>
+            <!-- 回复列表 -->
+            <div v-if="c.replies && c.replies.length > 0" class="replies-list">
+              <div v-for="r in c.replies" :key="r.id" class="reply-item">
+                <div class="reply-meta">
+                  {{ r.username }} · {{ r.created_at }}<span v-if="r.location" class="comment-location"> · IP属地：{{ r.location }}</span>
+                </div>
+                <div class="reply-content">{{ r.content }}</div>
+                <div class="comment-actions">
+                  <span class="action-btn like-btn" :class="{ liked: r.is_liked }" @click="toggleLike(r)">
+                    <svg viewBox="0 0 24 24" width="14" height="14"><path fill="currentColor" d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+                    {{ r.like_count || 0 }}
+                  </span>
+                  <span v-if="canDeleteComment(r)" class="action-btn delete-btn" @click="deleteComment(r)">
+                    <svg viewBox="0 0 24 24" width="14" height="14"><path fill="currentColor" d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+                    删除
+                  </span>
+                </div>
+              </div>
             </div>
           </li>
         </ul>
@@ -136,7 +173,7 @@
 import { ref, computed, onMounted } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import api from "../api";
-import { playerState, playSong, formatDuration } from "../stores/player";
+import { playerState, playSong, formatDuration, pauseSong, resumeSong } from "../stores/player";
 
 const route = useRoute();
 const router = useRouter();
@@ -151,6 +188,14 @@ const lyricsContainer = ref(null);
 // 添加到歌单相关
 const showPlaylistModal = ref(false);
 const userPlaylists = ref([]);
+
+// 回复相关
+const replyingTo = ref(null);
+const replyText = ref("");
+
+// 当前用户信息
+const currentUserId = ref(null);
+const isAdmin = ref(false);
 
 // 判断当前歌曲是否正在播放
 const isCurrentSong = computed(() => {
@@ -208,7 +253,9 @@ const loadSongDetail = async () => {
 };
 
 const loadComments = async () => {
-  const res = await api.get(`/songs/${songId}/comments`);
+  const userId = localStorage.getItem("user_id");
+  const url = userId ? `/songs/${songId}/comments?user_id=${userId}` : `/songs/${songId}/comments`;
+  const res = await api.get(url);
   comments.value = res.data;
 };
 
@@ -222,10 +269,9 @@ const handlePlay = () => {
   if (isCurrentSong.value) {
     // 当前歌曲，切换播放/暂停
     if (playerState.isPlaying) {
-      // 暂停 - 通过修改状态触发 App.vue 中的 watch
-      playerState.isPlaying = false;
+      pauseSong();
     } else {
-      playerState.isPlaying = true;
+      resumeSong();
     }
   } else {
     // 不是当前歌曲，播放这首歌
@@ -305,9 +351,95 @@ const goToPlaylists = () => {
   router.push("/playlists");
 };
 
+// 点赞评论
+const toggleLike = async (comment) => {
+  const userId = localStorage.getItem("user_id");
+  if (!userId) {
+    alert("请先登录");
+    router.push("/login");
+    return;
+  }
+  try {
+    const res = await api.post(`/comments/${comment.id}/like`, { user_id: Number(userId) });
+    comment.is_liked = res.data.is_liked;
+    comment.like_count = comment.is_liked ? (comment.like_count || 0) + 1 : Math.max(0, (comment.like_count || 1) - 1);
+  } catch (e) {
+    console.error("点赞失败", e);
+  }
+};
+
+// 显示回复输入框
+const showReplyInput = (comment) => {
+  const userId = localStorage.getItem("user_id");
+  if (!userId) {
+    alert("请先登录");
+    router.push("/login");
+    return;
+  }
+  replyingTo.value = comment.id;
+  replyText.value = "";
+};
+
+// 取消回复
+const cancelReply = () => {
+  replyingTo.value = null;
+  replyText.value = "";
+};
+
+// 提交回复
+const submitReply = async (parentComment) => {
+  const userId = localStorage.getItem("user_id");
+  if (!userId) {
+    alert("请先登录");
+    router.push("/login");
+    return;
+  }
+  if (!replyText.value.trim()) {
+    alert("回复内容不能为空");
+    return;
+  }
+  try {
+    await api.post(`/songs/${songId}/comments`, {
+      user_id: Number(userId),
+      content: replyText.value,
+      parent_id: parentComment.id
+    });
+    replyingTo.value = null;
+    replyText.value = "";
+    loadComments();
+  } catch (e) {
+    const data = e.response?.data;
+    if (data?.reason) {
+      alert(`${data.msg}：${data.reason}`);
+    } else {
+      alert(data?.msg || "回复失败");
+    }
+  }
+};
+
+// 判断是否可以删除评论
+const canDeleteComment = (comment) => {
+  if (!currentUserId.value) return false;
+  return comment.user_id === currentUserId.value || isAdmin.value;
+};
+
+// 删除评论
+const deleteComment = async (comment) => {
+  if (!confirm("确定要删除这条评论吗？")) return;
+  try {
+    await api.delete(`/comments/${comment.id}?user_id=${currentUserId.value}`);
+    loadComments();
+  } catch (e) {
+    alert(e.response?.data?.msg || "删除失败");
+  }
+};
+
 onMounted(() => {
   // 滚动到页面顶部
   window.scrollTo(0, 0);
+  // 获取当前用户信息
+  currentUserId.value = Number(localStorage.getItem("user_id")) || null;
+  isAdmin.value = localStorage.getItem("is_admin") === "1";
   loadSongDetail();
   loadComments();
 });
@@ -370,15 +502,16 @@ onMounted(() => {
 .cover-box {
   width: 220px;
   height: 220px;
-  border-radius: 4px;
+  border-radius: 8px;
   overflow: hidden;
   background: linear-gradient(135deg, rgba(255,255,255,0.4) 0%, #8BA8A8 50%, #7a9999 100%);
   display: flex;
   align-items: center;
   justify-content: center;
   border: 2px solid #d4a84b;
-  box-shadow: 0 8px 25px rgba(139, 168, 168, 0.2);
+  box-shadow: 0 8px 25px rgba(139, 168, 168, 0.3);
   flex-shrink: 0;
+  position: relative;
 }
 
 .cover-img {
@@ -388,8 +521,23 @@ onMounted(() => {
 }
 
 .cover-placeholder {
-  font-size: 42px;
-  color: #d4a84b;
+  font-size: 48px;
+  color: #2d5a5a;
+}
+
+/* 无封面时显示音符图标 */
+.cover-box:not(:has(.cover-img)) .cover-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.cover-box:not(:has(.cover-img))::before {
+  content: '♪';
+  position: absolute;
+  font-size: 48px;
+  color: #2d5a5a;
+  opacity: 0.8;
 }
 
 .info-box {
@@ -426,34 +574,34 @@ onMounted(() => {
 }
 
 .btn {
-  padding: 8px 20px;
-  border-radius: 4px;
-  border: 1px solid rgba(212, 168, 75, 0.3);
-  background: #fffef9;
-  color: #666;
+  padding: 10px 24px;
+  border-radius: 20px;
+  border: 1px solid #d4a84b;
+  background: rgba(255, 255, 255, 0.9);
+  color: #2d5a5a;
   font-size: 13px;
   cursor: pointer;
   transition: all 0.3s;
   text-decoration: none;
   display: inline-flex;
   align-items: center;
+  letter-spacing: 1px;
 }
 
 .btn:hover {
-  border-color: #d4a84b;
-  color: #d4a84b;
-  background: rgba(212, 168, 75, 0.1);
+  background: #fff;
+  box-shadow: 0 2px 8px rgba(212, 168, 75, 0.3);
 }
 
 .btn.primary {
-  background: linear-gradient(135deg, rgba(255,255,255,0.4) 0%, #8BA8A8 50%, #7a9999 100%);
+  background: rgba(255, 255, 255, 0.9);
   border-color: #d4a84b;
-  color: #d4a84b;
+  color: #2d5a5a;
 }
 
 .btn.primary:hover {
-  background: linear-gradient(135deg, rgba(255,255,255,0.5) 0%, #9ab8b8 50%, #8BA8A8 100%);
-  box-shadow: 0 4px 12px rgba(139, 168, 168, 0.4);
+  background: #fff;
+  box-shadow: 0 2px 8px rgba(212, 168, 75, 0.3);
 }
 
 .now-playing-info {
@@ -580,10 +728,110 @@ onMounted(() => {
   margin-bottom: 4px;
 }
 
+.comment-location {
+  color: #2d5a5a;
+  font-size: 11px;
+  margin-left: 2px;
+}
+
 .comment-content {
   font-size: 14px;
   color: #333;
   line-height: 1.6;
+}
+
+.comment-actions {
+  display: flex;
+  gap: 16px;
+  margin-top: 8px;
+}
+
+.action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: #999;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.action-btn:hover {
+  color: #666;
+}
+
+.like-btn.liked {
+  color: #e74c3c;
+}
+
+.like-btn.liked svg {
+  fill: #e74c3c;
+}
+
+.delete-btn:hover {
+  color: #e74c3c;
+}
+
+.reply-input-box {
+  margin-top: 10px;
+  padding: 10px;
+  background: rgba(45, 90, 90, 0.03);
+  border-radius: 4px;
+}
+
+.reply-input-box textarea {
+  width: 100%;
+  padding: 8px;
+  font-size: 13px;
+  border: 1px solid rgba(212, 168, 75, 0.3);
+  border-radius: 4px;
+  resize: none;
+  box-sizing: border-box;
+  font-family: inherit;
+}
+
+.reply-input-box textarea:focus {
+  outline: none;
+  border-color: #d4a84b;
+}
+
+.reply-btns {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.btn.small {
+  padding: 5px 12px;
+  font-size: 12px;
+}
+
+.replies-list {
+  margin-top: 10px;
+  padding-left: 16px;
+  border-left: 2px solid rgba(212, 168, 75, 0.2);
+}
+
+.reply-item {
+  padding: 8px 0;
+  border-bottom: 1px dashed rgba(212, 168, 75, 0.1);
+}
+
+.reply-item:last-child {
+  border-bottom: none;
+}
+
+.reply-meta {
+  font-size: 11px;
+  color: #999;
+  margin-bottom: 4px;
+}
+
+.reply-content {
+  font-size: 13px;
+  color: #444;
+  line-height: 1.5;
 }
 
 .comment-form textarea {

@@ -247,11 +247,11 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 10px 24px;
-  background: linear-gradient(135deg, #E6F4EA 0%, #d4a84b 100%);
-  border: 1px solid #d4a84b;
-  border-radius: 4px;
+  padding: 10px 20px;
+  background: rgba(255, 255, 255, 0.9);
   color: #2d5a5a;
+  border: 1px solid #d4a84b;
+  border-radius: 20px;
   font-size: 14px;
   cursor: pointer;
   transition: all 0.3s;
@@ -259,9 +259,8 @@ onMounted(() => {
 }
 
 .btn-create:hover {
-  background: linear-gradient(135deg, #d4a84b 0%, #e8c478 100%);
-  color: #fff;
-  box-shadow: 0 4px 12px rgba(212, 168, 75, 0.4);
+  background: #fff;
+  box-shadow: 0 2px 8px rgba(212, 168, 75, 0.3);
 }
 
 .loading {
@@ -290,19 +289,18 @@ onMounted(() => {
 
 .btn-primary {
   padding: 12px 32px;
-  background: linear-gradient(135deg, #E6F4EA 0%, #d4a84b 100%);
-  border: 1px solid #d4a84b;
-  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.9);
   color: #2d5a5a;
+  border: 1px solid #d4a84b;
+  border-radius: 20px;
   font-size: 14px;
   cursor: pointer;
   transition: all 0.3s;
 }
 
 .btn-primary:hover {
-  background: linear-gradient(135deg, #d4a84b 0%, #e8c478 100%);
-  color: #fff;
-  box-shadow: 0 4px 12px rgba(212, 168, 75, 0.4);
+  background: #fff;
+  box-shadow: 0 2px 8px rgba(212, 168, 75, 0.3);
 }
 
 .playlists-grid {
@@ -580,14 +578,15 @@ onMounted(() => {
 }
 
 .btn.primary {
-  background: linear-gradient(135deg, rgba(255,255,255,0.4) 0%, #8BA8A8 50%, #7a9999 100%);
+  background: rgba(255, 255, 255, 0.9);
   border-color: #d4a84b;
-  color: #d4a84b;
+  color: #2d5a5a;
+  border-radius: 20px;
 }
 
 .btn.primary:hover {
-  background: linear-gradient(135deg, rgba(255,255,255,0.5) 0%, #9ab8b8 50%, #8BA8A8 100%);
-  box-shadow: 0 4px 12px rgba(139, 168, 168, 0.4);
+  background: #fff;
+  box-shadow: 0 2px 8px rgba(212, 168, 75, 0.3);
 }
 
 /* Toast - 中华风 */

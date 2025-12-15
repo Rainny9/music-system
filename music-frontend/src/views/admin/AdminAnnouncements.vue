@@ -279,13 +279,14 @@ onMounted(() => { loadAnnouncements(); });
 
 .btn:hover { border-color: #2d5a5a; color: #2d5a5a; }
 .btn.primary {
-  background: linear-gradient(135deg, rgba(255,255,255,0.4) 0%, #8BA8A8 50%, #7a9999 100%);
+  background: rgba(255, 255, 255, 0.9);
   border: 1px solid #d4a84b;
-  color: #d4a84b;
+  color: #2d5a5a;
+  border-radius: 20px;
 }
 .btn.primary:hover {
-  background: linear-gradient(135deg, rgba(255,255,255,0.5) 0%, #9ab8b8 50%, #8BA8A8 100%);
-  box-shadow: 0 4px 12px rgba(139, 168, 168, 0.4);
+  background: #fff;
+  box-shadow: 0 2px 8px rgba(212, 168, 75, 0.3);
 }
 
 .table-wrapper {

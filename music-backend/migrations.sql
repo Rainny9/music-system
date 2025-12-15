@@ -106,3 +106,19 @@ CREATE TABLE IF NOT EXISTS rank_history (
     FOREIGN KEY (song_id) REFERENCES song(id) ON DELETE CASCADE,
     UNIQUE KEY unique_song_date (song_id, record_date)
 );
+
+-- 11. 为 Comment 表添加回复和IP字段
+ALTER TABLE comment ADD COLUMN IF NOT EXISTS parent_id INT NULL;
+ALTER TABLE comment ADD COLUMN IF NOT EXISTS location VARCHAR(50) NULL;
+ALTER TABLE comment ADD COLUMN IF NOT EXISTS ip_address VARCHAR(50) NULL;
+
+-- 12. 创建评论点赞表
+CREATE TABLE IF NOT EXISTS comment_like (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    comment_id INT NOT NULL,
+    user_id INT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (comment_id) REFERENCES comment(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES user(id) ON DELETE CASCADE,
+    UNIQUE KEY unique_comment_like (comment_id, user_id)
+);

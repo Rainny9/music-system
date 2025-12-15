@@ -207,9 +207,9 @@ const goToDetail = (songId) => {
   width: 100%;
   margin-top: 16px;
   padding: 14px 24px;
-  background: linear-gradient(180deg, rgba(255,255,255,0.3) 0%, #8BA8A8 50%, #7a9999 100%);
+  background: rgba(255, 255, 255, 0.9);
   border: 1px solid #d4a84b;
-  border-radius: 8px;
+  border-radius: 20px;
   color: #2d5a5a;
   font-size: 16px;
   cursor: pointer;
@@ -217,8 +217,8 @@ const goToDetail = (songId) => {
 }
 
 .btn-search:hover:not(:disabled) {
-  background: linear-gradient(180deg, rgba(255,255,255,0.5) 0%, #9ab8b8 50%, #8BA8A8 100%);
-  box-shadow: 0 4px 15px rgba(139, 168, 168, 0.4);
+  background: #fff;
+  box-shadow: 0 2px 8px rgba(212, 168, 75, 0.3);
 }
 
 .btn-search:disabled {
@@ -356,17 +356,18 @@ const goToDetail = (songId) => {
 
 .btn-action {
   padding: 8px 20px;
-  background: linear-gradient(135deg, rgba(255,255,255,0.4) 0%, #8BA8A8 50%, #7a9999 100%);
+  background: rgba(255, 255, 255, 0.9);
   border: 1px solid #d4a84b;
-  border-radius: 4px;
-  color: #d4a84b;
+  border-radius: 20px;
+  color: #2d5a5a;
   font-size: 13px;
   cursor: pointer;
   transition: all 0.3s;
 }
 
 .btn-action:hover {
-  background: linear-gradient(135deg, rgba(255,255,255,0.5) 0%, #9ab8b8 50%, #8BA8A8 100%);
+  background: #fff;
+  box-shadow: 0 2px 8px rgba(212, 168, 75, 0.3);
 }
 
 .btn-action.secondary {

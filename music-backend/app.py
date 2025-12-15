@@ -53,7 +53,18 @@ class Comment(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     song_id = db.Column(db.Integer, db.ForeignKey("song.id"))
     user_id = db.Column(db.Integer, db.ForeignKey("user.id"))
+    parent_id = db.Column(db.Integer, db.ForeignKey("comment.id"), nullable=True)  # 父评论ID，用于回复
     content = db.Column(db.Text, nullable=False)
+    location = db.Column(db.String(50), nullable=True)  # 用户所在省份
+    ip_address = db.Column(db.String(50), nullable=True)  # IP地址
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+
+class CommentLike(db.Model):
+    """评论点赞"""
+    id = db.Column(db.Integer, primary_key=True)
+    comment_id = db.Column(db.Integer, db.ForeignKey("comment.id"))
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 
@@ -384,8 +395,74 @@ def download_song(song_id):
 
 @app.route("/api/songs/<int:song_id>/comments", methods=["GET"])
 def list_comments(song_id):
-    comments = Comment.query.filter_by(song_id=song_id).order_by(Comment.created_at.desc()).all()
-    return jsonify([{"id": c.id, "song_id": c.song_id, "user_id": c.user_id, "content": c.content, "created_at": c.created_at.isoformat()} for c in comments])
+    # 只获取主评论（parent_id为空的）
+    comments = Comment.query.filter_by(song_id=song_id, parent_id=None).order_by(Comment.created_at.desc()).all()
+    current_user_id = request.args.get("user_id", type=int)
+    result = []
+    for c in comments:
+        user = User.query.get(c.user_id)
+        username = user.username if user else f"用户{c.user_id}"
+        created_time = c.created_at.strftime("%Y-%m-%d %H:%M") if c.created_at else ""
+        # 获取点赞数
+        like_count = CommentLike.query.filter_by(comment_id=c.id).count()
+        # 当前用户是否已点赞
+        is_liked = False
+        if current_user_id:
+            is_liked = CommentLike.query.filter_by(comment_id=c.id, user_id=current_user_id).first() is not None
+        # 获取回复列表
+        replies = Comment.query.filter_by(parent_id=c.id).order_by(Comment.created_at.asc()).all()
+        reply_list = []
+        for r in replies:
+            reply_user = User.query.get(r.user_id)
+            reply_username = reply_user.username if reply_user else f"用户{r.user_id}"
+            reply_time = r.created_at.strftime("%Y-%m-%d %H:%M") if r.created_at else ""
+            reply_like_count = CommentLike.query.filter_by(comment_id=r.id).count()
+            reply_is_liked = False
+            if current_user_id:
+                reply_is_liked = CommentLike.query.filter_by(comment_id=r.id, user_id=current_user_id).first() is not None
+            reply_list.append({
+                "id": r.id,
+                "user_id": r.user_id,
+                "username": reply_username,
+                "content": r.content,
+                "location": r.location or "",
+                "created_at": reply_time,
+                "like_count": reply_like_count,
+                "is_liked": reply_is_liked
+            })
+        result.append({
+            "id": c.id,
+            "song_id": c.song_id,
+            "user_id": c.user_id,
+            "username": username,
+            "content": c.content,
+            "location": c.location or "",
+            "created_at": created_time,
+            "like_count": like_count,
+            "is_liked": is_liked,
+            "reply_count": len(replies),
+            "replies": reply_list
+        })
+    return jsonify(result)
+
+
+def get_location_by_ip(ip_address):
+    """通过IP地址获取省份"""
+    import requests
+    try:
+        # 本地IP返回本地
+        if ip_address in ['127.0.0.1', 'localhost', '::1']:
+            return "本地"
+        # 使用免费的IP定位API
+        resp = requests.get(f'https://ip.useragentinfo.com/json?ip={ip_address}', timeout=3)
+        if resp.status_code == 200:
+            data = resp.json()
+            province = data.get('province', '')
+            if province:
+                return province.replace('省', '').replace('市', '').replace('自治区', '').replace('特别行政区', '')
+    except:
+        pass
+    return ""
 
 
 @app.route("/api/songs/<int:song_id>/comments", methods=["POST"])
@@ -393,8 +470,17 @@ def add_comment(song_id):
     data = request.json
     user_id = data.get("user_id")
     content = data.get("content")
+    parent_id = data.get("parent_id")  # 回复的父评论ID
     if not user_id or not content:
         return jsonify({"msg": "user_id and content required"}), 400
+    
+    # 获取用户IP地址
+    ip_address = request.headers.get('X-Forwarded-For', request.remote_addr)
+    if ip_address and ',' in ip_address:
+        ip_address = ip_address.split(',')[0].strip()
+    
+    # 通过IP获取省份
+    location = get_location_by_ip(ip_address)
     
     # AI内容审核
     from ai_service import content_moderation
@@ -406,10 +492,58 @@ def add_comment(song_id):
             "risk_level": moderation_result.get("risk_level", "medium")
         }), 400
     
-    comment = Comment(song_id=song_id, user_id=user_id, content=content)
+    comment = Comment(song_id=song_id, user_id=user_id, content=content, parent_id=parent_id, location=location, ip_address=ip_address)
     db.session.add(comment)
     db.session.commit()
     return jsonify({"msg": "comment added"})
+
+
+@app.route("/api/comments/<int:comment_id>/like", methods=["POST"])
+def toggle_comment_like(comment_id):
+    """切换评论点赞状态"""
+    data = request.json
+    user_id = data.get("user_id")
+    if not user_id:
+        return jsonify({"msg": "user_id required"}), 400
+    
+    existing = CommentLike.query.filter_by(comment_id=comment_id, user_id=user_id).first()
+    if existing:
+        db.session.delete(existing)
+        db.session.commit()
+        return jsonify({"msg": "unliked", "is_liked": False})
+    else:
+        like = CommentLike(comment_id=comment_id, user_id=user_id)
+        db.session.add(like)
+        db.session.commit()
+        return jsonify({"msg": "liked", "is_liked": True})
+
+
+@app.route("/api/comments/<int:comment_id>", methods=["DELETE"])
+def delete_comment(comment_id):
+    """删除评论 - 用户可删除自己的评论，管理员可删除任何评论"""
+    user_id = request.args.get("user_id", type=int)
+    if not user_id:
+        return jsonify({"msg": "user_id required"}), 400
+    
+    comment = Comment.query.get_or_404(comment_id)
+    user = User.query.get(user_id)
+    
+    # 检查权限：评论作者或管理员可删除
+    if comment.user_id != user_id and (not user or not user.is_admin):
+        return jsonify({"msg": "无权删除此评论"}), 403
+    
+    try:
+        # 删除该评论的所有回复
+        Comment.query.filter_by(parent_id=comment_id).delete()
+        # 删除该评论的点赞
+        CommentLike.query.filter_by(comment_id=comment_id).delete()
+        # 删除评论
+        db.session.delete(comment)
+        db.session.commit()
+        return jsonify({"msg": "评论已删除"})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"msg": f"删除失败: {str(e)}"}), 500
 
 
 @app.route("/api/songs/<int:song_id>/favorite", methods=["POST"])

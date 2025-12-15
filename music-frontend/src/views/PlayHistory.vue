@@ -413,8 +413,8 @@ onMounted(() => {
 .playlist-modal-body { padding: 16px; max-height: 400px; overflow-y: auto; }
 .empty-playlists { text-align: center; padding: 30px 0; }
 .empty-playlists p { color: #999; margin-bottom: 16px; }
-.create-btn { padding: 10px 24px; background: linear-gradient(135deg, rgba(255,255,255,0.4) 0%, #8BA8A8 50%, #7a9999 100%); color: #d4a84b; border: 1px solid #d4a84b; border-radius: 4px; cursor: pointer; transition: all 0.3s; }
-.create-btn:hover { background: linear-gradient(135deg, rgba(255,255,255,0.5) 0%, #9ab8b8 50%, #8BA8A8 100%); box-shadow: 0 4px 12px rgba(139, 168, 168, 0.4); }
+.create-btn { padding: 10px 24px; background: rgba(255, 255, 255, 0.9); color: #2d5a5a; border: 1px solid #d4a84b; border-radius: 20px; cursor: pointer; transition: all 0.3s; }
+.create-btn:hover { background: #fff; box-shadow: 0 2px 8px rgba(212, 168, 75, 0.3); }
 .playlist-list { display: flex; flex-direction: column; gap: 8px; }
 .playlist-item { display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: 4px; cursor: pointer; transition: all 0.3s; border: 1px solid transparent; }
 .playlist-item:hover { background: rgba(212, 168, 75, 0.1); border-color: rgba(212, 168, 75, 0.2); }

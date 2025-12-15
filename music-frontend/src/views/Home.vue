@@ -66,7 +66,12 @@
         </div>
         <div class="song-list-simple">
           <div v-for="(song, index) in latestSongs.slice(0, 10)" :key="song.id" class="song-row">
-            <span class="row-index" :class="{ top: index < 3 }" @click="play(song)">{{ index + 1 }}</span>
+            <span class="row-index" :class="{ top: index < 3 }">{{ index + 1 }}</span>
+            <button class="row-play-btn" @click="play(song)" title="播放">
+              <svg viewBox="0 0 24 24" width="16" height="16">
+                <path fill="currentColor" d="M8 5v14l11-7z"/>
+              </svg>
+            </button>
             <span class="row-title clickable" @click="goDetail(song.id)">{{ song.title }}</span>
             <span class="row-artist">{{ song.artist || '未知' }}</span>
             <span class="row-duration">{{ formatDuration(song.duration) }}</span>
@@ -777,8 +782,27 @@ onUnmounted(() => { stopCarousel(); });
 }
 .song-row:hover { background: rgba(45, 90, 90, 0.03); }
 .song-row:last-child { border-bottom: none; }
-.row-index { width: 32px; font-size: 15px; color: #999; text-align: center; cursor: pointer; }
+.row-index { width: 28px; font-size: 15px; color: #999; text-align: center; }
 .row-index.top { color: #2d5a5a; font-weight: 700; }
+.row-play-btn {
+  width: 24px;
+  height: 24px;
+  border: none;
+  background: none;
+  color: #2d5a5a;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 8px;
+  transition: all 0.2s;
+  flex-shrink: 0;
+  padding: 0;
+}
+.row-play-btn:hover {
+  color: #d4a84b;
+  transform: scale(1.15);
+}
 .row-title { flex: 1; font-size: 14px; color: #333; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-right: 15px; transition: color 0.2s; }
 .row-title.clickable { cursor: pointer; }
 .row-title.clickable:hover { color: #2d5a5a; }
@@ -812,8 +836,8 @@ onUnmounted(() => { stopCarousel(); });
 /* 操作栏 - 中华风 */
 .action-bar { padding: 16px 0; display: flex; align-items: center; gap: 15px; }
 .action-btn { display: flex; align-items: center; gap: 6px; padding: 10px 24px; border-radius: 4px; font-size: 13px; cursor: pointer; border: 1px solid rgba(212, 168, 75, 0.3); background: #fffef9; transition: all 0.3s; }
-.action-btn.primary { background: linear-gradient(135deg, rgba(255,255,255,0.4) 0%, #8BA8A8 50%, #7a9999 100%); color: #d4a84b; border-color: #d4a84b; }
-.action-btn.primary:hover { background: linear-gradient(135deg, rgba(255,255,255,0.5) 0%, #9ab8b8 50%, #8BA8A8 100%); box-shadow: 0 4px 12px rgba(139, 168, 168, 0.4); }
+.action-btn.primary { background: rgba(255, 255, 255, 0.9); color: #2d5a5a; border-color: #d4a84b; border-radius: 20px; }
+.action-btn.primary:hover { background: #fff; box-shadow: 0 2px 8px rgba(212, 168, 75, 0.3); }
 .song-total { font-size: 13px; color: #999; }
 
 /* 歌曲列表 */
