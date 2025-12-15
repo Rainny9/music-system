@@ -688,10 +688,20 @@ played_at       DATETIME        -       播放时间        否          否
 id              INTEGER         11      评论ID          是          否
 song_id         INTEGER         11      歌曲ID          否          是
 user_id         INTEGER         11      用户ID          否          是
+parent_id       INTEGER         11      父评论ID        否          是
 content         TEXT            -       评论内容        否          否
+location        VARCHAR         50      IP属地          否          否
+ip_address      VARCHAR         50      IP地址          否          否
 created_at      DATETIME        -       评论时间        否          否
 
-表3.8 公告表（announcement）
+表3.8 评论点赞表（comment_like）
+字段名          数据类型        长度    字段含义        是否主键    是否外键
+id              INTEGER         11      点赞ID          是          否
+comment_id      INTEGER         11      评论ID          否          是
+user_id         INTEGER         11      用户ID          否          是
+created_at      DATETIME        -       点赞时间        否          否
+
+表3.9 公告表（announcement）
 字段名          数据类型        长度    字段含义        是否主键    是否外键
 id              INTEGER         11      公告ID          是          否
 title           VARCHAR         200     公告标题        否          否
@@ -712,6 +722,8 @@ updated_at      DATETIME        -       更新时间        否          否
 - 用户与播放历史：一对多关系
 - 用户与评论：一对多关系
 - 歌曲与评论：一对多关系
+- 评论与评论：一对多关系（评论回复，通过parent_id自关联）
+- 用户与评论点赞：多对多关系（通过评论点赞表关联）
 
 
 第四章 系统实现
@@ -819,11 +831,16 @@ const handleLogin = async () => {
 
 歌曲详情页展示歌曲的完整信息，包括：
 
-1. 歌曲封面：大尺寸展示歌曲封面图片。
+1. 歌曲封面：大尺寸展示歌曲封面图片，无封面时显示音符图标占位。
 2. 歌曲信息：标题、歌手、专辑、流派、发行日期等。
-3. 操作按钮：播放、收藏、添加到歌单、下载等。
-4. 歌词展示：显示歌曲的完整歌词。
-5. 评论区域：用户可以查看和发表评论。
+3. 操作按钮：播放/暂停、收藏、添加到歌单、下载等，按钮采用统一的白色圆角胶囊样式。
+4. 歌词展示：显示歌曲的完整歌词，支持LRC格式歌词解析和当前播放行高亮。
+5. 评论区域：用户可以查看和发表评论，评论功能包括：
+   - 评论发表：用户登录后可发表评论，评论内容经过AI内容审核
+   - IP属地显示：评论显示用户的IP属地（省份），格式为"IP属地：福建"
+   - 评论点赞：用户可对评论进行点赞，以红色心形图标表示，显示点赞数量
+   - 评论回复：用户可对评论进行回复，回复内容显示在主评论下方
+   - 评论删除：用户可删除自己发表的评论，管理员可删除任何评论
 
 4.1.4 我的收藏
 
@@ -1997,10 +2014,25 @@ CREATE TABLE IF NOT EXISTS comment (
     id INT AUTO_INCREMENT PRIMARY KEY,
     song_id INT,
     user_id INT,
+    parent_id INT NULL,
     content TEXT NOT NULL,
+    location VARCHAR(50) NULL,
+    ip_address VARCHAR(50) NULL,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (song_id) REFERENCES song(id),
-    FOREIGN KEY (user_id) REFERENCES user(id)
+    FOREIGN KEY (user_id) REFERENCES user(id),
+    FOREIGN KEY (parent_id) REFERENCES comment(id)
+);
+
+-- 评论点赞表
+CREATE TABLE IF NOT EXISTS comment_like (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    comment_id INT NOT NULL,
+    user_id INT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (comment_id) REFERENCES comment(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES user(id) ON DELETE CASCADE,
+    UNIQUE KEY unique_comment_like (comment_id, user_id)
 );
 
 -- 公告表
