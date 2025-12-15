@@ -198,16 +198,6 @@
             <button class="modal-close" @click="closeDetailEditor">×</button>
           </div>
           <div class="modal-body">
-            <!-- AI自动填充按钮 -->
-            <div class="ai-fetch-bar">
-              <button class="btn-ai-fetch" @click="fetchSongInfoByAI" :disabled="fetchingInfo">
-                <svg viewBox="0 0 24 24" width="16" height="16">
-                  <path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
-                </svg>
-                {{ fetchingInfo ? 'AI搜索中...' : 'AI自动填充' }}
-              </button>
-              <span class="ai-hint">点击自动获取专辑、发行时间、歌词等信息</span>
-            </div>
             <div class="detail-layout">
               <div class="cover-section">
                 <label>封面图片</label>
@@ -375,7 +365,6 @@ const editingTags = ref({
 // 详情编辑弹窗
 const showDetailEditor = ref(false);
 const savingDetail = ref(false);
-const fetchingInfo = ref(false);
 const coverInput = ref(null);
 const detailForm = ref({
   id: null,
@@ -482,53 +471,6 @@ const closeDetailEditor = () => {
     coverPreview: "",
     coverFile: null,
   };
-};
-
-// AI自动获取歌曲信息
-const fetchSongInfoByAI = async () => {
-  if (!detailForm.value.title) {
-    msg.value = "歌曲名称不能为空";
-    msgType.value = "error";
-    return;
-  }
-  
-  fetchingInfo.value = true;
-  msg.value = "AI正在搜索歌曲信息，请稍候...";
-  msgType.value = "success";
-  
-  try {
-    const res = await api.post("/ai/fetch-song-info", {
-      title: detailForm.value.title,
-      artist: detailForm.value.artist
-    });
-    
-    if (res.data.success && res.data.data) {
-      const info = res.data.data;
-      
-      // 填充表单
-      if (info.album) {
-        detailForm.value.album = info.album;
-      }
-      if (info.release_date) {
-        detailForm.value.release_date = info.release_date;
-      }
-      if (info.lyrics) {
-        // 处理歌词换行
-        detailForm.value.lyrics = info.lyrics.replace(/\\n/g, '\n');
-      }
-      
-      msg.value = "AI已自动填充歌曲信息";
-      msgType.value = "success";
-    } else {
-      msg.value = res.data.error || "获取歌曲信息失败";
-      msgType.value = "error";
-    }
-  } catch (e) {
-    msg.value = e.response?.data?.error || "AI搜索失败，请稍后重试";
-    msgType.value = "error";
-  } finally {
-    fetchingInfo.value = false;
-  }
 };
 
 // 触发封面上传
@@ -1284,50 +1226,6 @@ onMounted(() => {
 /* 详情编辑弹窗 */
 .detail-editor-modal {
   width: 700px;
-}
-
-/* AI自动填充栏 */
-.ai-fetch-bar {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 12px 16px;
-  background: linear-gradient(135deg, rgba(45, 90, 90, 0.05), rgba(212, 168, 75, 0.05));
-  border: 1px solid rgba(212, 168, 75, 0.2);
-  border-radius: 8px;
-  margin-bottom: 20px;
-}
-
-.btn-ai-fetch {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 16px;
-  background: linear-gradient(135deg, rgba(255,255,255,0.4) 0%, #8BA8A8 50%, #7a9999 100%);
-  color: #d4a84b;
-  border: 1px solid #d4a84b;
-  border-radius: 6px;
-  font-size: 14px;
-  cursor: pointer;
-  transition: all 0.3s;
-  white-space: nowrap;
-}
-
-.btn-ai-fetch:hover:not(:disabled) {
-  background: linear-gradient(135deg, rgba(255,255,255,0.5) 0%, #9ab8b8 50%, #8BA8A8 100%);
-  box-shadow: 0 4px 12px rgba(139, 168, 168, 0.4);
-}
-
-.btn-ai-fetch:disabled {
-  background: #ccc;
-  border-color: #ccc;
-  color: #999;
-  cursor: not-allowed;
-}
-
-.ai-hint {
-  font-size: 13px;
-  color: #8b7355;
 }
 
 .detail-layout {
