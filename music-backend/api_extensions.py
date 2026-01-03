@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 from sqlalchemy import func, desc
 
 
-def register_extensions(app, db, Song, User, require_admin, Favorite, Playlist, PlaylistSong, PlayHistory, SongLike, SearchHistory, song_to_dict):
+def register_extensions(app, db, Song, User, require_admin, Favorite, Playlist, PlaylistSong, PlayHistory, SongLike, SearchHistory, song_to_dict, Artist, ArtistFollow):
     """注册扩展API - 所有模型通过参数传入，避免循环导入"""
 
     # ========== 1. 歌曲点赞 API ==========
@@ -342,6 +342,8 @@ def register_extensions(app, db, Song, User, require_admin, Favorite, Playlist, 
     @app.route("/api/users/<int:user_id>/password", methods=["PUT"])
     def change_password(user_id):
         """修改密码"""
+        from app import hash_password, verify_password
+        
         user = User.query.get_or_404(user_id)
         data = request.json
 
@@ -351,11 +353,259 @@ def register_extensions(app, db, Song, User, require_admin, Favorite, Playlist, 
         if not old_password or not new_password:
             return jsonify({"msg": "old_password and new_password required"}), 400
 
-        if user.password != old_password:
+        # 使用bcrypt验证旧密码
+        if not verify_password(old_password, user.password):
             return jsonify({"msg": "old password incorrect"}), 401
 
-        user.password = new_password
+        # 使用bcrypt加密新密码
+        user.password = hash_password(new_password)
         db.session.commit()
         return jsonify({"msg": "password changed"})
+
+    # ========== 5. 歌手管理 API ==========
+    @app.route("/api/artists", methods=["GET"])
+    def list_artists():
+        """获取歌手列表"""
+        base_url = request.host_url.strip("/")
+        keyword = request.args.get("keyword", "").strip()
+        
+        query = Artist.query
+        if keyword:
+            query = query.filter(Artist.name.like(f"%{keyword}%"))
+        
+        artists = query.order_by(Artist.created_at.desc()).all()
+        result = []
+        for a in artists:
+            follower_count = ArtistFollow.query.filter_by(artist_id=a.id).count()
+            song_count = Song.query.filter(
+                db.or_(Song.artist_id == a.id, Song.artist == a.name)
+            ).count()
+            result.append({
+                "id": a.id,
+                "name": a.name,
+                "avatar_url": f"{base_url}/api/artists/{a.id}/avatar" if a.avatar_path else None,
+                "description": a.description,
+                "follower_count": follower_count,
+                "song_count": song_count,
+                "created_at": a.created_at.isoformat() if a.created_at else None
+            })
+        return jsonify(result)
+
+    @app.route("/api/artists/by-name", methods=["GET"])
+    def get_artist_by_name():
+        """通过歌手名字查询歌手ID"""
+        name = request.args.get("name", "").strip()
+        if not name:
+            return jsonify({"msg": "name required"}), 400
+        
+        artist = Artist.query.filter_by(name=name).first()
+        if artist:
+            return jsonify({"id": artist.id, "name": artist.name})
+        
+        # 如果歌手不存在，自动创建
+        new_artist = Artist(name=name)
+        db.session.add(new_artist)
+        db.session.commit()
+        return jsonify({"id": new_artist.id, "name": new_artist.name, "created": True})
+
+    @app.route("/api/artists/<int:artist_id>", methods=["GET"])
+    def get_artist(artist_id):
+        """获取歌手详情"""
+        base_url = request.host_url.strip("/")
+        artist = Artist.query.get_or_404(artist_id)
+        user_id = request.args.get("user_id", type=int)
+        
+        follower_count = ArtistFollow.query.filter_by(artist_id=artist_id).count()
+        
+        # 检查当前用户是否已关注
+        is_followed = False
+        if user_id:
+            is_followed = ArtistFollow.query.filter_by(artist_id=artist_id, user_id=user_id).first() is not None
+        
+        # 获取歌手的歌曲列表（通过artist_id或歌手名字匹配）
+        songs = Song.query.filter(
+            db.or_(
+                Song.artist_id == artist_id,
+                Song.artist == artist.name
+            )
+        ).order_by(Song.play_count.desc()).all()
+        
+        song_count = len(songs)
+        
+        return jsonify({
+            "id": artist.id,
+            "name": artist.name,
+            "avatar_url": f"{base_url}/api/artists/{artist.id}/avatar" if artist.avatar_path else None,
+            "description": artist.description,
+            "follower_count": follower_count,
+            "song_count": song_count,
+            "is_followed": is_followed,
+            "songs": [song_to_dict(s, base_url) for s in songs],
+            "created_at": artist.created_at.isoformat() if artist.created_at else None
+        })
+
+    @app.route("/api/artists/<int:artist_id>/avatar", methods=["GET"])
+    def get_artist_avatar(artist_id):
+        """获取歌手头像"""
+        import os
+        from flask import send_from_directory
+        artist = Artist.query.get_or_404(artist_id)
+        if not artist.avatar_path or not os.path.exists(artist.avatar_path):
+            return jsonify({"msg": "avatar not found"}), 404
+        directory, filename = os.path.split(artist.avatar_path)
+        return send_from_directory(directory, filename)
+
+    @app.route("/api/artists/<int:artist_id>/follow", methods=["POST"])
+    def toggle_artist_follow(artist_id):
+        """关注/取消关注歌手"""
+        data = request.json
+        user_id = data.get("user_id")
+        if not user_id:
+            return jsonify({"msg": "user_id required"}), 400
+        
+        artist = Artist.query.get_or_404(artist_id)
+        follow = ArtistFollow.query.filter_by(artist_id=artist_id, user_id=user_id).first()
+        
+        if follow:
+            db.session.delete(follow)
+            db.session.commit()
+            follower_count = ArtistFollow.query.filter_by(artist_id=artist_id).count()
+            return jsonify({"msg": "unfollowed", "is_followed": False, "follower_count": follower_count})
+        else:
+            follow = ArtistFollow(artist_id=artist_id, user_id=user_id)
+            db.session.add(follow)
+            db.session.commit()
+            follower_count = ArtistFollow.query.filter_by(artist_id=artist_id).count()
+            return jsonify({"msg": "followed", "is_followed": True, "follower_count": follower_count})
+
+    @app.route("/api/users/<int:user_id>/following", methods=["GET"])
+    def get_user_following(user_id):
+        """获取用户关注的歌手列表"""
+        base_url = request.host_url.strip("/")
+        follows = ArtistFollow.query.filter_by(user_id=user_id).order_by(ArtistFollow.created_at.desc()).all()
+        
+        result = []
+        for f in follows:
+            artist = Artist.query.get(f.artist_id)
+            if artist:
+                follower_count = ArtistFollow.query.filter_by(artist_id=artist.id).count()
+                song_count = Song.query.filter_by(artist_id=artist.id).count()
+                result.append({
+                    "id": artist.id,
+                    "name": artist.name,
+                    "avatar_url": f"{base_url}/api/artists/{artist.id}/avatar" if artist.avatar_path else None,
+                    "description": artist.description,
+                    "follower_count": follower_count,
+                    "song_count": song_count,
+                    "followed_at": f.created_at.isoformat() if f.created_at else None
+                })
+        return jsonify(result)
+
+    # ========== 6. 歌手管理 API（管理员） ==========
+    @app.route("/api/admin/artists", methods=["GET"])
+    def admin_list_artists():
+        """获取所有歌手（管理员）"""
+        auth_resp = require_admin()
+        if auth_resp is not None:
+            return auth_resp
+        base_url = request.host_url.strip("/")
+        artists = Artist.query.order_by(Artist.created_at.desc()).all()
+        result = []
+        for a in artists:
+            follower_count = ArtistFollow.query.filter_by(artist_id=a.id).count()
+            # 通过artist_id或歌手名字匹配歌曲数
+            song_count = Song.query.filter(
+                db.or_(Song.artist_id == a.id, Song.artist == a.name)
+            ).count()
+            result.append({
+                "id": a.id,
+                "name": a.name,
+                "avatar_url": f"{base_url}/api/artists/{a.id}/avatar" if a.avatar_path else None,
+                "description": a.description,
+                "follower_count": follower_count,
+                "song_count": song_count,
+                "created_at": a.created_at.isoformat() if a.created_at else None
+            })
+        return jsonify(result)
+
+    @app.route("/api/admin/artists", methods=["POST"])
+    def admin_create_artist():
+        """创建歌手（管理员）"""
+        auth_resp = require_admin()
+        if auth_resp is not None:
+            return auth_resp
+        data = request.json
+        name = data.get("name")
+        description = data.get("description", "")
+        
+        if not name:
+            return jsonify({"msg": "name required"}), 400
+        
+        existing = Artist.query.filter_by(name=name).first()
+        if existing:
+            return jsonify({"msg": "artist already exists"}), 400
+        
+        artist = Artist(name=name, description=description)
+        db.session.add(artist)
+        db.session.commit()
+        return jsonify({"msg": "artist created", "id": artist.id})
+
+    @app.route("/api/admin/artists/<int:artist_id>", methods=["PUT"])
+    def admin_update_artist(artist_id):
+        """更新歌手信息（管理员）"""
+        auth_resp = require_admin()
+        if auth_resp is not None:
+            return auth_resp
+        artist = Artist.query.get_or_404(artist_id)
+        data = request.json or {}
+        
+        if data.get("name"):
+            existing = Artist.query.filter_by(name=data.get("name")).first()
+            if existing and existing.id != artist_id:
+                return jsonify({"msg": "artist name already exists"}), 400
+            artist.name = data.get("name")
+        if "description" in data:
+            artist.description = data.get("description")
+        
+        db.session.commit()
+        return jsonify({"msg": "artist updated"})
+
+    @app.route("/api/admin/artists/<int:artist_id>/avatar", methods=["POST"])
+    def admin_upload_artist_avatar(artist_id):
+        """上传歌手头像（管理员）"""
+        import os
+        auth_resp = require_admin()
+        if auth_resp is not None:
+            return auth_resp
+        artist = Artist.query.get_or_404(artist_id)
+        file = request.files.get("avatar")
+        if not file:
+            return jsonify({"msg": "avatar file required"}), 400
+        
+        UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), "uploads")
+        filename = f"artist_{artist_id}_{file.filename}"
+        save_path = os.path.join(UPLOAD_FOLDER, filename)
+        file.save(save_path)
+        artist.avatar_path = save_path
+        db.session.commit()
+        base_url = request.host_url.strip("/")
+        return jsonify({"msg": "avatar uploaded", "avatar_url": f"{base_url}/api/artists/{artist_id}/avatar"})
+
+    @app.route("/api/admin/artists/<int:artist_id>", methods=["DELETE"])
+    def admin_delete_artist(artist_id):
+        """删除歌手（管理员）"""
+        auth_resp = require_admin()
+        if auth_resp is not None:
+            return auth_resp
+        artist = Artist.query.get_or_404(artist_id)
+        
+        # 删除关注记录
+        ArtistFollow.query.filter_by(artist_id=artist_id).delete()
+        # 将该歌手的歌曲artist_id设为空
+        Song.query.filter_by(artist_id=artist_id).update({"artist_id": None})
+        
+        db.session.delete(artist)
+        db.session.commit()
+        return jsonify({"msg": "artist deleted"})
 
     return app

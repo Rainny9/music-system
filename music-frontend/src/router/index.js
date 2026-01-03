@@ -7,12 +7,15 @@ import Favorites from "../views/Favorites.vue";
 import AdminSongs from "../views/admin/AdminSongs.vue";
 import AdminUsers from "../views/admin/AdminUsers.vue";
 import AdminAnnouncements from "../views/admin/AdminAnnouncements.vue";
+import AdminArtists from "../views/admin/AdminArtists.vue";
 import SearchResult from "../views/SearchResult.vue";
 import PlayHistory from "../views/PlayHistory.vue";
 import Playlists from "../views/Playlists.vue";
 import PlaylistDetail from "../views/PlaylistDetail.vue";
 import Profile from "../views/Profile.vue";
 import SongRecognition from "../views/SongRecognition.vue";
+import Artists from "../views/Artists.vue";
+import ArtistDetail from "../views/ArtistDetail.vue";
 
 const routes = [
   { path: "/", name: "Home", component: Home },
@@ -25,9 +28,12 @@ const routes = [
   { path: "/playlists/:id", name: "PlaylistDetail", component: PlaylistDetail },
   { path: "/profile", name: "Profile", component: Profile },
   { path: "/recognize", name: "SongRecognition", component: SongRecognition },
+  { path: "/artists", name: "Artists", component: Artists },
+  { path: "/artists/:id", name: "ArtistDetail", component: ArtistDetail },
   { path: "/admin/songs", name: "AdminSongs", component: AdminSongs },
   { path: "/admin/users", name: "AdminUsers", component: AdminUsers },
   { path: "/admin/announcements", name: "AdminAnnouncements", component: AdminAnnouncements },
+  { path: "/admin/artists", name: "AdminArtists", component: AdminArtists },
   { path: "/search", name: "SearchResult", component: SearchResult },
 ];
 

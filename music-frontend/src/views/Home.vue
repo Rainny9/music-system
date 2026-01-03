@@ -53,7 +53,7 @@
             </div>
             <div class="card-info" @click="goDetail(song.id)">
               <div class="card-title">{{ song.title }}</div>
-              <div class="card-artist">{{ song.artist || '未知歌手' }}</div>
+              <div class="card-artist clickable" @click.stop="goArtist(song.artist)">{{ song.artist || '未知歌手' }}</div>
             </div>
           </div>
         </div>
@@ -73,7 +73,7 @@
               </svg>
             </button>
             <span class="row-title clickable" @click="goDetail(song.id)">{{ song.title }}</span>
-            <span class="row-artist">{{ song.artist || '未知' }}</span>
+            <span class="row-artist clickable" @click="goArtist(song.artist)">{{ song.artist || '未知' }}</span>
             <span class="row-duration">{{ formatDuration(song.duration) }}</span>
             <button class="row-fav" :class="{ active: favoriteIds.has(song.id) }" @click.stop="toggleFavorite(song)">
               <svg viewBox="0 0 24 24" width="16" height="16">
@@ -152,7 +152,7 @@
             </button>
           </span>
           <span class="col-title" @click="goDetail(song.id)">{{ song.title }}</span>
-          <span class="col-artist">{{ song.artist || '未知歌手' }}</span>
+          <span class="col-artist clickable" @click="goArtist(song.artist)">{{ song.artist || '未知歌手' }}</span>
           <span class="col-album">{{ song.album || '未知专辑' }}</span>
           <span class="col-duration">{{ formatDuration(song.duration) }}</span>
           <span class="col-actions">
@@ -181,7 +181,7 @@
             <span class="rank-num" :class="{ top: song.current_rank <= 3 }">{{ song.current_rank }}</span>
             <div class="rank-info">
               <div class="rank-title">{{ song.title }}</div>
-              <div class="rank-artist">{{ song.artist || '未知歌手' }}</div>
+              <div class="rank-artist clickable" @click.stop="goArtist(song.artist)">{{ song.artist || '未知歌手' }}</div>
             </div>
             <div class="rank-change">
               <template v-if="song.is_new">
@@ -468,6 +468,17 @@ const selectMood = (m) => { selectedMood.value = m; loadSongs(); };
 const play = (song) => { playSong(song, songs.value); };
 const playAll = () => { if (songs.value.length) playSong(songs.value[0], songs.value); };
 const goDetail = (id) => { router.push(`/songs/${id}`); };
+const goArtist = async (artistName) => { 
+  if (!artistName) return;
+  try {
+    const res = await api.get('/artists/by-name', { params: { name: artistName } });
+    if (res.data.id) {
+      router.push(`/artists/${res.data.id}`);
+    }
+  } catch (e) {
+    console.error('查询歌手失败', e);
+  }
+};
 
 const loadFavorites = async () => {
   const userId = localStorage.getItem("user_id");
@@ -765,6 +776,8 @@ onUnmounted(() => { stopCarousel(); });
 .card-info:hover .card-title { color: #2d5a5a; }
 .card-title { font-size: 14px; font-weight: 500; color: #333; margin-bottom: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; transition: color 0.2s; }
 .card-artist { font-size: 12px; color: #999; }
+.card-artist.clickable { cursor: pointer; transition: color 0.2s; }
+.card-artist.clickable:hover { color: #2d5a5a; }
 
 /* 简单歌曲列表 - 中华风 */
 .song-list-simple { 
@@ -807,6 +820,8 @@ onUnmounted(() => { stopCarousel(); });
 .row-title.clickable { cursor: pointer; }
 .row-title.clickable:hover { color: #2d5a5a; }
 .row-artist { width: 120px; font-size: 13px; color: #999; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.row-artist.clickable { cursor: pointer; transition: color 0.2s; }
+.row-artist.clickable:hover { color: #2d5a5a; }
 .row-duration { width: 60px; font-size: 13px; color: #999; text-align: right; margin-right: 15px; }
 .row-fav { width: 30px; border: none; background: none; color: #ccc; cursor: pointer; transition: color 0.2s; flex-shrink: 0; }
 .row-fav:hover { color: #ff4d4f; }
@@ -855,6 +870,8 @@ onUnmounted(() => { stopCarousel(); });
 .col-title { flex: 2; font-size: 14px; color: #333; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; }
 .col-title:hover { color: #d4a84b; }
 .col-artist, .col-album { flex: 1.5; font-size: 13px; color: #666; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.col-artist.clickable { cursor: pointer; transition: color 0.2s; }
+.col-artist.clickable:hover { color: #2d5a5a; }
 .col-duration { width: 70px; text-align: right; font-size: 13px; color: #999; padding-right: 20px; }
 .col-actions { width: 100px; display: flex; justify-content: flex-end; gap: 10px; flex-shrink: 0; }
 .icon-btn { width: 28px; height: 28px; border: none; background: transparent; cursor: pointer; color: #999; display: flex; align-items: center; justify-content: center; text-decoration: none; }
@@ -876,6 +893,8 @@ onUnmounted(() => { stopCarousel(); });
 .rank-info { flex: 1; min-width: 0; margin-right: 15px; }
 .rank-title { font-size: 15px; color: #333; margin-bottom: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .rank-artist { font-size: 12px; color: #999; }
+.rank-artist.clickable { cursor: pointer; transition: color 0.2s; }
+.rank-artist.clickable:hover { color: #2d5a5a; }
 .rank-change { width: 70px; text-align: center; flex-shrink: 0; }
 .rank-up { color: #e53935; font-size: 13px; font-weight: 600; }
 .rank-down { color: #43a047; font-size: 13px; font-weight: 600; }

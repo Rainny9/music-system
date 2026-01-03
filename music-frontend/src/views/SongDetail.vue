@@ -26,7 +26,7 @@
           {{ song.title || "歌曲详情" }}
         </h2>
         <p class="song-artist">
-          歌手：{{ song.artist || "未知" }}
+          歌手：<span class="artist-link" @click="goArtist(song.artist)">{{ song.artist || "未知" }}</span>
         </p>
         <p class="song-meta">
           专辑：{{ song.album || "暂无" }}　|　分类：{{ song.genre || "未分类" }}　|　
@@ -262,6 +262,19 @@ const loadComments = async () => {
 // 返回上一页
 const goBack = () => {
   router.back();
+};
+
+// 跳转到歌手详情页
+const goArtist = async (artistName) => {
+  if (!artistName) return;
+  try {
+    const res = await api.get('/artists/by-name', { params: { name: artistName } });
+    if (res.data.id) {
+      router.push(`/artists/${res.data.id}`);
+    }
+  } catch (e) {
+    console.error('查询歌手失败', e);
+  }
 };
 
 // 播放/暂停切换
@@ -558,6 +571,17 @@ onMounted(() => {
   font-size: 15px;
   color: #666;
   margin-bottom: 6px;
+}
+
+.artist-link {
+  color: #2d5a5a;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.artist-link:hover {
+  color: #d4a84b;
+  text-decoration: underline;
 }
 
 .song-meta {

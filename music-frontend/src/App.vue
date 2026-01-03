@@ -56,30 +56,18 @@
         >
           个人中心
         </router-link>
-        <router-link
-          v-if="isAdmin"
-          to="/admin/songs"
-          class="nav-item"
-          :class="{ active: $route.path === '/admin/songs' }"
-        >
-          歌曲管理
-        </router-link>
-        <router-link
-          v-if="isAdmin"
-          to="/admin/users"
-          class="nav-item"
-          :class="{ active: $route.path === '/admin/users' }"
-        >
-          用户管理
-        </router-link>
-        <router-link
-          v-if="isAdmin"
-          to="/admin/announcements"
-          class="nav-item"
-          :class="{ active: $route.path === '/admin/announcements' }"
-        >
-          公告管理
-        </router-link>
+        <!-- 管理员下拉菜单 -->
+        <div v-if="isAdmin" class="admin-dropdown" @mouseenter="showAdminMenu = true" @mouseleave="showAdminMenu = false">
+          <span class="nav-item" :class="{ active: $route.path.startsWith('/admin') }">
+            后台管理 ▾
+          </span>
+          <div v-show="showAdminMenu" class="admin-menu">
+            <router-link to="/admin/songs" class="admin-menu-item">歌曲管理</router-link>
+            <router-link to="/admin/users" class="admin-menu-item">用户管理</router-link>
+            <router-link to="/admin/artists" class="admin-menu-item">歌手管理</router-link>
+            <router-link to="/admin/announcements" class="admin-menu-item">公告管理</router-link>
+          </div>
+        </div>
       </nav>
 
       <!-- 右侧搜索 + 登录/用户 -->
@@ -492,6 +480,7 @@ const isAdmin = ref(false);
 const userName = ref("");
 const userAvatar = ref("");
 const showUserMenu = ref(false);
+const showAdminMenu = ref(false);
 const searchText = ref("");
 const globalAudioRef = ref(null);
 const showDropdown = ref(false);
@@ -892,6 +881,48 @@ watch(showAddToPlaylist, (val) => {
   height: 2px;
   background: #d4a84b;
   border-radius: 1px;
+}
+
+/* 管理员下拉菜单 */
+.admin-dropdown {
+  position: relative;
+}
+
+.admin-dropdown .nav-item {
+  cursor: pointer;
+}
+
+.admin-menu {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  margin-top: 8px;
+  background: #fffef9;
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  border: 1px solid rgba(212, 168, 75, 0.2);
+  min-width: 120px;
+  z-index: 1000;
+  overflow: hidden;
+}
+
+.admin-menu-item {
+  display: block;
+  padding: 10px 16px;
+  font-size: 13px;
+  color: #333;
+  text-decoration: none;
+  transition: all 0.2s;
+}
+
+.admin-menu-item:hover {
+  background: rgba(45, 90, 90, 0.08);
+  color: #2d5a5a;
+}
+
+.admin-menu-item.router-link-active {
+  color: #d4a84b;
+  background: rgba(212, 168, 75, 0.1);
 }
 
 /* 右侧区域 */

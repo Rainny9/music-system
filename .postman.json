@@ -1,0 +1,399 @@
+{
+  "info": {
+    "name": "Music API Collection",
+    "description": "音乐分类检索系统 API 测试集合",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://127.0.0.1:5000",
+      "type": "string"
+    },
+    {
+      "key": "user_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "admin_user_id",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Register",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/register",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"username\": \"testuser\", \"password\": \"test123\"}"
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "pm.test('Status code is 200', function() { pm.response.to.have.status(200); });",
+                "pm.test('Returns user_id', function() { var json = pm.response.json(); pm.expect(json.user_id).to.exist; });"
+              ]
+            }
+          }]
+        },
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/login",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"username\": \"admin\", \"password\": \"admin123\"}"
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "pm.test('Status code is 200', function() { pm.response.to.have.status(200); });",
+                "pm.test('Returns user_id and is_admin', function() { var json = pm.response.json(); pm.expect(json.user_id).to.exist; pm.collectionVariables.set('admin_user_id', json.user_id); });"
+              ]
+            }
+          }]
+        }
+      ]
+    },
+    {
+      "name": "Songs",
+      "item": [
+        {
+          "name": "List Songs",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/songs"
+          },
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "pm.test('Status code is 200', function() { pm.response.to.have.status(200); });",
+                "pm.test('Returns array', function() { var json = pm.response.json(); pm.expect(json).to.be.an('array'); });"
+              ]
+            }
+          }]
+        },
+        {
+          "name": "Search Songs",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/songs?keyword=test",
+              "host": ["{{base_url}}"],
+              "path": ["api", "songs"],
+              "query": [{"key": "keyword", "value": "test"}]
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": ["pm.test('Status code is 200', function() { pm.response.to.have.status(200); });"]
+            }
+          }]
+        },
+        {
+          "name": "Get Song Detail",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/songs/1"
+          },
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "pm.test('Status code is 200 or 404', function() { pm.expect([200, 404]).to.include(pm.response.code); });"
+              ]
+            }
+          }]
+        },
+        {
+          "name": "Get Genres",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/genres"
+          },
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "pm.test('Status code is 200', function() { pm.response.to.have.status(200); });",
+                "pm.test('Returns array', function() { var json = pm.response.json(); pm.expect(json).to.be.an('array'); });"
+              ]
+            }
+          }]
+        },
+        {
+          "name": "Get Ranking",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/songs/ranking"
+          },
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": ["pm.test('Status code is 200', function() { pm.response.to.have.status(200); });"]
+            }
+          }]
+        }
+      ]
+    },
+    {
+      "name": "Announcements",
+      "item": [
+        {
+          "name": "List Announcements",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/announcements"
+          },
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "pm.test('Status code is 200', function() { pm.response.to.have.status(200); });",
+                "pm.test('Returns array', function() { var json = pm.response.json(); pm.expect(json).to.be.an('array'); });"
+              ]
+            }
+          }]
+        }
+      ]
+    },
+    {
+      "name": "Playlists",
+      "item": [
+        {
+          "name": "List Playlists",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/playlists"
+          },
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "pm.test('Status code is 200', function() { pm.response.to.have.status(200); });",
+                "pm.test('Returns array', function() { var json = pm.response.json(); pm.expect(json).to.be.an('array'); });"
+              ]
+            }
+          }]
+        },
+        {
+          "name": "Create Playlist",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/playlists",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"user_id\": 1, \"name\": \"Test Playlist\", \"description\": \"Test description\"}"
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "pm.test('Status code is 200 or 400', function() { pm.expect([200, 400]).to.include(pm.response.code); });"
+              ]
+            }
+          }]
+        }
+      ]
+    },
+    {
+      "name": "User",
+      "item": [
+        {
+          "name": "Get User Info",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/users/1/info"
+          },
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "pm.test('Status code is 200 or 404', function() { pm.expect([200, 404]).to.include(pm.response.code); });"
+              ]
+            }
+          }]
+        },
+        {
+          "name": "Get User Stats",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/users/1/stats"
+          },
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "pm.test('Status code is 200 or 404', function() { pm.expect([200, 404]).to.include(pm.response.code); });"
+              ]
+            }
+          }]
+        },
+        {
+          "name": "Get User Favorites",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/users/1/favorites"
+          },
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "pm.test('Status code is 200', function() { pm.response.to.have.status(200); });"
+              ]
+            }
+          }]
+        },
+        {
+          "name": "Get Play History",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/users/1/history"
+          },
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "pm.test('Status code is 200', function() { pm.response.to.have.status(200); });"
+              ]
+            }
+          }]
+        }
+      ]
+    },
+    {
+      "name": "AI Features",
+      "item": [
+        {
+          "name": "AI Recommendations",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/ai/recommendations"
+          },
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "pm.test('Status code is 200', function() { pm.response.to.have.status(200); });",
+                "pm.test('Returns songs array', function() { var json = pm.response.json(); pm.expect(json.songs).to.be.an('array'); });"
+              ]
+            }
+          }]
+        },
+        {
+          "name": "AI Smart Sort",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/ai/smart-sort"
+          },
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": ["pm.test('Status code is 200', function() { pm.response.to.have.status(200); });"]
+            }
+          }]
+        },
+        {
+          "name": "AI Ranking",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/ai/ranking"
+          },
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "pm.test('Status code is 200', function() { pm.response.to.have.status(200); });",
+                "pm.test('Returns ranking array', function() { var json = pm.response.json(); pm.expect(json.ranking).to.be.an('array'); });"
+              ]
+            }
+          }]
+        },
+        {
+          "name": "AI Playlist Themes",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/ai/playlist-themes"
+          },
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "pm.test('Status code is 200', function() { pm.response.to.have.status(200); });",
+                "pm.test('Returns themes', function() { var json = pm.response.json(); pm.expect(json.themes).to.be.an('array'); });"
+              ]
+            }
+          }]
+        }
+      ]
+    },
+    {
+      "name": "Admin",
+      "item": [
+        {
+          "name": "Admin List Songs",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/admin/songs?admin_user_id={{admin_user_id}}"
+          },
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "pm.test('Status code is 200 or 401', function() { pm.expect([200, 401]).to.include(pm.response.code); });"
+              ]
+            }
+          }]
+        },
+        {
+          "name": "Admin List Users",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/admin/users?admin_user_id={{admin_user_id}}"
+          },
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "pm.test('Status code is 200 or 401', function() { pm.expect([200, 401]).to.include(pm.response.code); });"
+              ]
+            }
+          }]
+        },
+        {
+          "name": "Admin List Announcements",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/admin/announcements?admin_user_id={{admin_user_id}}"
+          },
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "pm.test('Status code is 200 or 401', function() { pm.expect([200, 401]).to.include(pm.response.code); });"
+              ]
+            }
+          }]
+        }
+      ]
+    }
+  ]
+}

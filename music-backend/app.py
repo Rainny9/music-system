@@ -4,6 +4,24 @@ from flask import Flask, request, jsonify, send_from_directory
 from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
 from mutagen import File as MutagenFile
+import bcrypt
+
+
+# ========== 密码加密工具函数 ==========
+def hash_password(password: str) -> str:
+    """使用bcrypt对密码进行哈希加密"""
+    salt = bcrypt.gensalt()
+    hashed = bcrypt.hashpw(password.encode('utf-8'), salt)
+    return hashed.decode('utf-8')
+
+
+def verify_password(password: str, hashed_password: str) -> bool:
+    """验证密码是否正确"""
+    try:
+        return bcrypt.checkpw(password.encode('utf-8'), hashed_password.encode('utf-8'))
+    except Exception:
+        # 兼容旧的明文密码（过渡期）
+        return password == hashed_password
 
 app = Flask(__name__)
 CORS(app, resources={r"/api/*": {"origins": "*", "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"], "allow_headers": ["Content-Type", "Authorization"]}})
@@ -22,7 +40,7 @@ db = SQLAlchemy(app)
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
-    password = db.Column(db.String(128), nullable=False)
+    password = db.Column(db.String(256), nullable=False)  # 增加长度以存储bcrypt哈希值
     is_admin = db.Column(db.Boolean, default=False)
     avatar_path = db.Column(db.String(300), nullable=True)  # 头像路径
     gender = db.Column(db.String(10), nullable=True)  # 性别: male/female/other
@@ -167,7 +185,8 @@ def create_tables_and_seed():
             db.session.add(song)
             db.session.commit()
     if not User.query.filter_by(is_admin=True).first():
-        admin = User(username="admin", password="admin123", is_admin=True)
+        # 使用bcrypt加密管理员密码
+        admin = User(username="admin", password=hash_password("admin123"), is_admin=True)
         db.session.add(admin)
         db.session.commit()
 
@@ -216,7 +235,9 @@ def register():
         return jsonify({"msg": "username and password required"}), 400
     if User.query.filter_by(username=username).first():
         return jsonify({"msg": "username already exists"}), 400
-    user = User(username=username, password=password)
+    # 使用bcrypt加密密码
+    hashed_pwd = hash_password(password)
+    user = User(username=username, password=hashed_pwd)
     db.session.add(user)
     db.session.commit()
     return jsonify({"msg": "register success", "user_id": user.id})
@@ -227,8 +248,12 @@ def login():
     data = request.json
     username = data.get("username")
     password = data.get("password")
-    user = User.query.filter_by(username=username, password=password).first()
+    # 先查找用户
+    user = User.query.filter_by(username=username).first()
     if not user:
+        return jsonify({"msg": "invalid username or password"}), 401
+    # 使用bcrypt验证密码
+    if not verify_password(password, user.password):
         return jsonify({"msg": "invalid username or password"}), 401
     base_url = request.host_url.strip("/")
     avatar_url = f"{base_url}/api/users/{user.id}/avatar" if user.avatar_path and os.path.exists(user.avatar_path) else None
@@ -834,7 +859,21 @@ def upload_song():
     save_path = os.path.join(UPLOAD_FOLDER, filename)
     file.save(save_path)
     duration = get_audio_duration(save_path)
-    song = Song(title=title, artist=artist, album=album, duration=duration, genre=genre, tags=tags, file_path=save_path)
+    
+    # 自动创建或关联歌手
+    artist_id = None
+    if artist and artist.strip():
+        artist_name = artist.strip()
+        existing_artist = Artist.query.filter_by(name=artist_name).first()
+        if existing_artist:
+            artist_id = existing_artist.id
+        else:
+            new_artist = Artist(name=artist_name)
+            db.session.add(new_artist)
+            db.session.flush()  # 获取ID
+            artist_id = new_artist.id
+    
+    song = Song(title=title, artist=artist, artist_id=artist_id, album=album, duration=duration, genre=genre, tags=tags, file_path=save_path)
     db.session.add(song)
     db.session.commit()
     base_url = request.host_url.strip("/")
@@ -845,7 +884,8 @@ def upload_song():
 from api_extensions import register_extensions
 register_extensions(
     app, db, Song, User, require_admin,
-    Favorite, Playlist, PlaylistSong, PlayHistory, SongLike, SearchHistory, song_to_dict
+    Favorite, Playlist, PlaylistSong, PlayHistory, SongLike, SearchHistory, song_to_dict,
+    Artist, ArtistFollow
 )
 
 # 注册AI功能API

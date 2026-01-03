@@ -60,7 +60,7 @@
             </button>
           </span>
           <span class="col-title">{{ song.title }}</span>
-          <span class="col-artist">{{ song.artist || '未知歌手' }}</span>
+          <span class="col-artist clickable" @click.stop="goArtist(song.artist)">{{ song.artist || '未知歌手' }}</span>
           <span class="col-duration">{{ formatDuration(song.duration) }}</span>
           <span class="col-actions">
             <button class="icon-btn danger" @click="removeSong(song)" title="从歌单移除">
@@ -113,6 +113,19 @@ const goHome = () => router.push('/');
 
 const play = (song) => {
   playSong(song, songs.value);
+};
+
+// 跳转到歌手详情页
+const goArtist = async (artistName) => {
+  if (!artistName) return;
+  try {
+    const res = await api.get('/artists/by-name', { params: { name: artistName } });
+    if (res.data.id) {
+      router.push(`/artists/${res.data.id}`);
+    }
+  } catch (e) {
+    console.error('查询歌手失败', e);
+  }
 };
 
 const playAll = () => {
@@ -365,6 +378,15 @@ onMounted(loadPlaylist);
   flex: 1.5;
   font-size: 13px;
   color: #666;
+}
+
+.col-artist.clickable {
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.col-artist.clickable:hover {
+  color: #2d5a5a;
 }
 
 .col-duration {
